@@ -19,10 +19,14 @@ export default function LoginPage() {
 
     try {
       const supabase = supabaseBrowser();
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+      if (!siteUrl) {
+        throw new Error('NEXT_PUBLIC_SITE_URL is not configured');
+      }
       const { error: signInError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`
+          emailRedirectTo: `${siteUrl.replace(/\/$/, '')}/auth/callback`
         }
       });
 
@@ -46,12 +50,16 @@ export default function LoginPage() {
     setError(null);
     try {
       const supabase = supabaseBrowser();
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+      if (!siteUrl) {
+        throw new Error('NEXT_PUBLIC_SITE_URL is not configured');
+      }
       const {
         data: { url },
         error: oauthError
       } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/auth/callback` }
+        options: { redirectTo: `${siteUrl.replace(/\/$/, '')}/auth/callback` }
       });
       if (oauthError) {
         setError(oauthError.message);
