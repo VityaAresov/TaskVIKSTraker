@@ -1,6 +1,6 @@
-import { cookies } from 'next/headers';
-import { SupabaseEnvError, createSupabaseServerClient } from './supabaseClient';
+import { redirect } from 'next/navigation';
 import { type User } from '@supabase/supabase-js';
+import { SupabaseEnvError, createSupabaseServerClient } from './supabaseClient';
 
 export type AppRole = 'worker' | 'manager' | 'owner';
 
@@ -46,18 +46,15 @@ export async function getCurrentUser(): Promise<AppUser | null> {
   }
 }
 
-export async function requireRole(minRole: AppRole) {
+export async function requireUser() {
   const user = await getCurrentUser();
-  if (!user) throw new Error('Unauthorized');
-  const precedence: Record<AppRole, number> = { worker: 0, manager: 1, owner: 2 };
-  if (precedence[user.role] < precedence[minRole]) {
-    throw new Error('Insufficient permissions');
+  if (!user) {
+    redirect('/login');
   }
   return user;
 }
 
-export function setAuthCookies(accessToken: string, refreshToken: string) {
-  const cookieStore = cookies();
-  cookieStore.set('sb-access-token', accessToken, { path: '/', httpOnly: true });
-  cookieStore.set('sb-refresh-token', refreshToken, { path: '/', httpOnly: true });
+export async function getCurrentUserRole(): Promise<AppRole | null> {
+  const user = await getCurrentUser();
+  return user?.role ?? null;
 }
