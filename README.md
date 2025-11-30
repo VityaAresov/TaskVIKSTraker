@@ -61,3 +61,7 @@ Visit `http://localhost:3000`.
 ## Notes
 - UI uses Tailwind for a clean, Figma-like light theme with progressive disclosure via tabs and cards.
 - Data displayed in pages is mocked for now; hook up to Supabase queries for production use.
+
+## Deployment
+- Vercel is expected to detect this as a Next.js app; `vercel.json` pins the framework and output to `.next` to avoid the “No Output Directory named \"public\" found” error.
+- An empty `public/` directory (tracked via `.gitkeep`) is included so Vercel’s static-output heuristics do not fail if project settings were previously misconfigured.
