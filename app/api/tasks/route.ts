@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '../../../lib/supabaseClient';
+import { createSupabaseServerClient } from '../../../lib/supabaseServer';
 import { getCurrentUser } from '../../../lib/auth';
 import { canManageProjects } from '../../../lib/permissions';
 

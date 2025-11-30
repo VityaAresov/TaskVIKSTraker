@@ -3,7 +3,7 @@
 A minimalistic yet powerful task-tracking workspace inspired by ClickUp + Kaiten. Built with Next.js 14, Tailwind CSS, and Supabase (PostgreSQL + Auth + RLS).
 
 ## Features
-- Google OAuth (Supabase Auth) with role-based access: worker, manager, owner (owners manage roles and AI settings).
+- Email magic links (primary) plus Google OAuth (Supabase Auth) with role-based access: worker, manager, owner (owners manage roles and AI settings).
 - Projects, sprints, tasks with visibility controls, subtasks, dependencies, comments, notifications.
 - Board, timeline, calendar, and resource allocation views.
 - Progress tracking with current/target values and aggregate subtasks (UI placeholder, backend fields ready).
@@ -24,7 +24,7 @@ Copy `.env.example` to `.env.local`. It is prefilled with the provided Supabase 
 - `SUPABASE_SERVICE_ROLE_KEY` – leave empty or set privately in Vercel if you use server actions.
 
 Both the `NEXT_PUBLIC_*` names and server-only `SUPABASE_URL`/`SUPABASE_ANON_KEY` keys are accepted (they resolve to the same values at runtime).
-- `NEXT_PUBLIC_SITE_URL` – base site URL used for OAuth redirects
+- `NEXT_PUBLIC_SITE_URL` – base site URL used for OAuth redirects and email magic link callbacks
 
 ### 3) Provision database
 Run the SQL schema in `supabase/schema.sql` on your Supabase project. You can use the Supabase SQL editor or CLI:
@@ -46,7 +46,7 @@ Visit `http://localhost:3000`.
 - `supabase/schema.sql` – database schema with RLS policies.
 
 ## Auth flow
-- Only Google OAuth is allowed.
+- Email magic link is the primary sign-in (Google OAuth is available as a secondary option).
 - On first login, create a row in `users` with default `worker` role. (Handled via Supabase trigger/edge function outside of this repo.)
 - Middleware (`middleware.ts`) redirects unauthenticated visitors to `/login`.
 

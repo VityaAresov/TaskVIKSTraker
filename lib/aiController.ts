@@ -1,4 +1,5 @@
-import { createServiceRoleClient, createSupabaseServerClient } from './supabaseClient';
+import { createServiceRoleClient } from './supabaseClient';
+import { createSupabaseServerClient } from './supabaseServer';
 import { type AppUser } from './auth';
 
 export type AIMutation =

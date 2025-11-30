@@ -1,8 +1,6 @@
 import { createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs';
 import { createClient } from '@supabase/supabase-js';
-import { createSupabaseServerClient as createServerSupabaseClient, ensureSupabaseEnv } from './supabaseServer';
-
-export class SupabaseEnvError extends Error {}
+import { ensureSupabaseEnv, SupabaseEnvError } from './supabaseEnv';
 
 function getSupabaseEnv() {
   const { supabaseUrl, supabaseAnonKey } = ensureSupabaseEnv();
@@ -15,10 +13,6 @@ export const createSupabaseBrowserClient = () => {
   return createBrowserSupabaseClient({ supabaseUrl, supabaseKey: supabaseAnonKey });
 };
 
-export const createSupabaseServerClient = () => {
-  return createServerSupabaseClient();
-};
-
 export const createServiceRoleClient = () => {
   const { supabaseUrl, supabaseServiceRoleKey } = getSupabaseEnv();
   if (!supabaseServiceRoleKey) {
@@ -26,3 +20,5 @@ export const createServiceRoleClient = () => {
   }
   return createClient(supabaseUrl, supabaseServiceRoleKey);
 };
+
+export { SupabaseEnvError };

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { type User } from '@supabase/supabase-js';
-import { SupabaseEnvError, createSupabaseServerClient } from './supabaseClient';
+import { SupabaseEnvError } from './supabaseEnv';
+import { createSupabaseServerClient } from './supabaseServer';
 
 export type AppRole = 'worker' | 'manager' | 'owner';
 
