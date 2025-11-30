@@ -17,10 +17,13 @@ npm install
 ```
 
 ### 2) Configure environment
-Copy `.env.example` to `.env.local` and set your Supabase values. Either the `NEXT_PUBLIC_*` names or the server-only `SUPABASE_URL`/`SUPABASE_ANON_KEY` keys are accepted (both resolve to the same values at runtime).
-- `NEXT_PUBLIC_SUPABASE_URL` or `SUPABASE_URL` – project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` or `SUPABASE_ANON_KEY` – anon key for client access
-- `SUPABASE_SERVICE_ROLE_KEY` – service role for server actions (kept server-side only)
+Copy `.env.example` to `.env.local`. It is prefilled with the provided Supabase project keys:
+
+- `NEXT_PUBLIC_SUPABASE_URL` – https://jjainebdqrdqvxjnoejz.supabase.co
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` – eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpqYWluZWJkcXJkcXZ4am5vZWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0OTAyODMsImV4cCI6MjA4MDA2NjI4M30.KykQsE2s2Cyg5Cr12L6f532C3VT0SEzTDQKq3BBYGFM
+- `SUPABASE_SERVICE_ROLE_KEY` – leave empty or set privately in Vercel if you use server actions.
+
+Both the `NEXT_PUBLIC_*` names and server-only `SUPABASE_URL`/`SUPABASE_ANON_KEY` keys are accepted (they resolve to the same values at runtime).
 - `NEXT_PUBLIC_SITE_URL` – base site URL used for OAuth redirects
 
 ### 3) Provision database
