@@ -1,79 +1,63 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
-import { supabaseBrowser, SupabaseEnvError } from '../../lib/supabaseClient';
+import { FormEvent, useState } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 
 export default function LoginPage() {
+  const supabase = createClientComponentClient();
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleEmailSignIn = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError(null);
-    setStatus(null);
-    setIsSubmitting(true);
-
-    try {
-      const supabase = supabaseBrowser();
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-      if (!siteUrl) {
-        throw new Error('NEXT_PUBLIC_SITE_URL is not configured');
-      }
-      const { error: signInError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${siteUrl.replace(/\/$/, '')}/auth/callback`
-        }
-      });
-
-      if (signInError) {
-        setError(signInError.message);
-      } else {
-        setStatus('Check your email for a magic link to sign in.');
-      }
-    } catch (err) {
-      if (err instanceof SupabaseEnvError || err instanceof Error) {
-        setError(err.message || 'Unable to start email sign-in.');
-      } else {
-        setError('Unable to start email sign-in.');
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
+  const resolveSiteUrl = () => {
+    if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+    if (typeof window !== 'undefined') return window.location.origin;
+    return 'https://task-viks-traker-g8c2.vercel.app';
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleMagicLink = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
     setError(null);
-    try {
-      const supabase = supabaseBrowser();
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-      if (!siteUrl) {
-        throw new Error('NEXT_PUBLIC_SITE_URL is not configured');
+
+    const siteUrl = resolveSiteUrl();
+
+    const { error: signInError } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${siteUrl}/auth/callback`
       }
-      const {
-        data: { url },
-        error: oauthError
-      } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: `${siteUrl.replace(/\/$/, '')}/auth/callback` }
-      });
-      if (oauthError) {
-        setError(oauthError.message);
-        return;
+    });
+
+    setLoading(false);
+
+    if (signInError) {
+      console.error('Error sending magic link', signInError);
+      setError('Error sending magic link, please try again.');
+      return;
+    }
+
+    setMessage('Check your email for the magic link.');
+  };
+
+  const handleGoogle = async () => {
+    setError(null);
+    const siteUrl = resolveSiteUrl();
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${siteUrl}/auth/callback`
       }
-      if (url) {
-        window.location.href = url;
-      }
-    } catch (err) {
-      if (err instanceof SupabaseEnvError || err instanceof Error) {
-        setError(err.message || 'Unable to start Google sign-in.');
-      } else {
-        setError('Unable to start Google sign-in.');
-      }
+    });
+
+    if (error) {
+      console.error('Error with Google sign-in', error);
+      setError('Unable to start Google sign-in.');
     }
   };
 
@@ -85,7 +69,7 @@ export default function LoginPage() {
           <div className="text-muted text-sm">Use your work email. We will send you a magic link.</div>
         </div>
 
-        <form className="space-y-3" onSubmit={handleEmailSignIn}>
+        <form className="space-y-3" onSubmit={handleMagicLink}>
           <label className="text-sm font-medium text-left block">Email</label>
           <Input
             type="email"
@@ -94,8 +78,8 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <Button className="w-full" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Sending...' : 'Continue with email'}
+          <Button className="w-full" type="submit" disabled={loading}>
+            {loading ? 'Sending...' : 'Continue with email'}
           </Button>
         </form>
 
@@ -107,12 +91,12 @@ export default function LoginPage() {
 
         <Button
           className="w-full bg-panel text-foreground border border-border hover:bg-muted"
-          onClick={handleGoogleSignIn}
+          onClick={handleGoogle}
         >
           Continue with Google
         </Button>
 
-        {status ? <div className="text-green-600 text-xs text-center">{status}</div> : null}
+        {message ? <div className="text-green-600 text-xs text-center">{message}</div> : null}
         {error ? <div className="text-red-600 text-xs text-center">{error}</div> : null}
       </div>
     </div>

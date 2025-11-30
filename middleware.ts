@@ -2,30 +2,34 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 
-const PUBLIC_PATHS = ['/login', '/auth/callback'];
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
+  const { pathname } = req.nextUrl;
 
-export async function middleware(request: NextRequest) {
-  const { pathname, search } = request.nextUrl;
-  const response = NextResponse.next();
-
-  // Allow Supabase to finish its OAuth/magic-link callback handling
-  if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
-    return response;
+  // ✅ Allow auth callback, login, and static assets to pass without session checks
+  if (
+    pathname.startsWith('/auth/callback') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/_next') ||
+    pathname === '/favicon.ico'
+  ) {
+    return res;
   }
 
-  const supabase = createMiddlewareClient({ req: request, res: response });
+  // ✅ For all other routes, check Supabase session via cookies
+  const supabase = createMiddlewareClient({ req, res });
   const {
     data: { session }
   } = await supabase.auth.getSession();
 
   if (!session) {
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = '/login';
-    loginUrl.searchParams.set('redirectedFrom', `${pathname}${search}`);
-    return NextResponse.redirect(loginUrl);
+    const redirectUrl = req.nextUrl.clone();
+    redirectUrl.pathname = '/login';
+    redirectUrl.searchParams.set('redirectedFrom', pathname + req.nextUrl.search);
+    return NextResponse.redirect(redirectUrl);
   }
 
-  return response;
+  return res;
 }
 
 export const config = {
