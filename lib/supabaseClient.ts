@@ -2,13 +2,19 @@ import { createBrowserSupabaseClient, createServerComponentClient } from '@supab
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
+export class SupabaseEnvError extends Error {}
+
 function getSupabaseEnv() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // Accept both public (browser-ready) and server-only variable names to avoid runtime crashes
+  // when environments are configured differently (e.g., SUPABASE_URL instead of NEXT_PUBLIC_SUPABASE_URL).
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Supabase environment variables are missing. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+    throw new SupabaseEnvError(
+      'Supabase environment variables are missing. Please set NEXT_PUBLIC_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_ANON_KEY (or SUPABASE_URL/SUPABASE_ANON_KEY).'
+    );
   }
 
   return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey };

@@ -17,9 +17,9 @@ npm install
 ```
 
 ### 2) Configure environment
-Copy `.env.example` to `.env.local` and set your Supabase values.
-- `NEXT_PUBLIC_SUPABASE_URL` – project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` – anon key for client access
+Copy `.env.example` to `.env.local` and set your Supabase values. Either the `NEXT_PUBLIC_*` names or the server-only `SUPABASE_URL`/`SUPABASE_ANON_KEY` keys are accepted (both resolve to the same values at runtime).
+- `NEXT_PUBLIC_SUPABASE_URL` or `SUPABASE_URL` – project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` or `SUPABASE_ANON_KEY` – anon key for client access
 - `SUPABASE_SERVICE_ROLE_KEY` – service role for server actions (kept server-side only)
 - `NEXT_PUBLIC_SITE_URL` – base site URL used for OAuth redirects
 
