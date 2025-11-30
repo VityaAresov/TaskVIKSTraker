@@ -24,7 +24,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       progress_current: payload.progress_current ?? existing.progress_current,
       progress_target: payload.progress_target ?? existing.progress_target,
       visible_to_role: payload.visible_to_role ?? existing.visible_to_role,
-      visible_to_user_ids: payload.visible_to_user_ids ?? existing.visible_to_user_ids
+      visible_to_user_ids: payload.visible_to_user_ids ?? existing.visible_to_user_ids,
+      description: payload.description ?? existing.description,
+      title: payload.title ?? existing.title,
+      due_date: payload.due_date ?? existing.due_date,
+      priority: payload.priority ?? existing.priority
     })
     .eq('id', params.id)
     .select()

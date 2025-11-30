@@ -10,10 +10,11 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get('project_id');
   const sprintId = searchParams.get('sprint_id');
-  let query = supabase.from('tasks').select('*');
+  let query = supabase.from('tasks').select('*, task_assignees(user_id), task_dependencies(depends_on_task_id)');
   if (projectId) query = query.eq('project_id', projectId);
   if (sprintId) query = query.eq('sprint_id', sprintId);
-  const { data } = await query;
+  const { data, error } = await query;
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ tasks: data ?? [] });
 }
 
@@ -38,10 +39,28 @@ export async function POST(request: Request) {
       visible_to_role: payload.visible_to_role ?? 'all',
       visible_to_user_ids: payload.visible_to_user_ids ?? null,
       due_date: payload.due_date,
+      start_date: payload.start_date ?? null,
       created_by: user.id
     })
     .select()
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  if (payload.assignees?.length) {
+    await supabase.from('task_assignees').insert(
+      payload.assignees.map((assigneeId: string) => ({ task_id: data.id, user_id: assigneeId }))
+    );
+    await Promise.all(
+      payload.assignees.map((assigneeId: string) =>
+        supabase.from('notifications').insert({
+          user_id: assigneeId,
+          type: 'task_assigned',
+          payload: { message: `You were assigned to ${payload.title}` },
+          is_read: false
+        })
+      )
+    );
+  }
+
   return NextResponse.json({ task: data });
 }
