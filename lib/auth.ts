@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { type User } from '@supabase/supabase-js';
-import { SupabaseEnvError } from './supabaseEnv';
 import { createSupabaseServerClient } from './supabaseServer';
 
 export type AppRole = 'worker' | 'manager' | 'owner';
@@ -21,11 +20,7 @@ export async function getSessionUser(): Promise<{ user: User | null }> {
     } = await supabase.auth.getUser();
     return { user };
   } catch (error) {
-    if (error instanceof SupabaseEnvError) {
-      console.error('Supabase environment variables are missing or invalid', error.message);
-    } else {
-      console.error('Failed to resolve Supabase session', error);
-    }
+    console.error('Failed to resolve Supabase session', error);
     return { user: null };
   }
 }
@@ -48,11 +43,26 @@ export async function getCurrentUser(): Promise<AppUser | null> {
 }
 
 export async function requireUser() {
-  const user = await getCurrentUser();
-  if (!user) {
+  const supabase = createSupabaseServerClient();
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+
+  if (!session) {
     redirect('/login');
   }
-  return user;
+
+  const { data } = await supabase
+    .from('users')
+    .select('id, email, full_name, avatar_url, role')
+    .eq('id', session.user.id)
+    .single();
+
+  if (!data) {
+    redirect('/login');
+  }
+
+  return data;
 }
 
 export async function getCurrentUserRole(): Promise<AppRole | null> {

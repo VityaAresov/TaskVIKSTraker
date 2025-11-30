@@ -1,21 +1,36 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 
 export default function LoginPage() {
+  const router = useRouter();
   const supabase = createClientComponentClient();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const checkSession = async () => {
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+      if (session) {
+        router.replace('/');
+      }
+    };
+    checkSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const resolveSiteUrl = () => {
     if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
     if (typeof window !== 'undefined') return window.location.origin;
-    return 'https://task-viks-traker-g8c2.vercel.app';
+    return '';
   };
 
   const handleMagicLink = async (e: FormEvent) => {

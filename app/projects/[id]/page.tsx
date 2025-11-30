@@ -1,4 +1,6 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Tabs } from '../../../components/ui/Tabs';
 import { KanbanBoard, type Task } from '../../../components/KanbanBoard';
 import { Timeline } from '../../../components/Timeline';
@@ -13,7 +15,16 @@ const mockTasks: Task[] = [
   { id: 't3', title: 'Refactor UI shell', description: 'Navigation and tabs', status: 'todo', progress_current: 0, progress_target: 100, due_date: null, start_date: null }
 ];
 
-export default function ProjectPage({ params }: { params: { id: string } }) {
+export default async function ProjectPage({ params }: { params: { id: string } }) {
+  const supabase = createServerComponentClient({ cookies });
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    redirect('/login');
+  }
+
   if (!params.id) return notFound();
 
   return (

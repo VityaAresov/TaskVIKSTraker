@@ -1,8 +1,10 @@
 import Link from 'next/link';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { getCurrentUser } from '../lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,14 +14,27 @@ const mockProjects = [
 ];
 
 export default async function DashboardPage() {
-  const user = await getCurrentUser();
+  const supabase = createServerComponentClient({ cookies });
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    redirect('/login');
+  }
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('full_name')
+    .eq('id', session.user.id)
+    .single();
 
   return (
     <div className="container-page space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs text-muted">Welcome back</div>
-          <div className="text-2xl font-semibold">{user?.full_name ?? 'Teammate'}</div>
+          <div className="text-2xl font-semibold">{profile?.full_name ?? 'Teammate'}</div>
         </div>
         <Button asChild>
           <Link href="/projects/new">New project</Link>

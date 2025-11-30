@@ -1,22 +1,15 @@
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { createClient } from '@supabase/supabase-js';
-import { resolveSupabasePublicEnv, resolveSupabaseServiceKey, SupabaseEnvError } from './supabaseEnv';
 
-let browserClient: ReturnType<typeof createClient> | null = null;
-
-function getPublicClient() {
-  if (!browserClient) {
-    const { supabaseUrl, supabaseAnonKey } = resolveSupabasePublicEnv();
-    browserClient = createClient(supabaseUrl, supabaseAnonKey);
-  }
-  return browserClient;
-}
-
-export const supabaseBrowser = getPublicClient;
+export const supabaseBrowser = () => createClientComponentClient();
 
 export function createServiceRoleClient() {
-  const { supabaseUrl } = resolveSupabasePublicEnv();
-  const serviceRoleKey = resolveSupabaseServiceKey();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_URL are required');
+  }
+
   return createClient(supabaseUrl, serviceRoleKey);
 }
-
-export { SupabaseEnvError };
