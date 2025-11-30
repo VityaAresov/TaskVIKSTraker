@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { createSupabaseBrowserClient, SupabaseEnvError } from '../../lib/supabaseClient';
+import { supabaseBrowser, SupabaseEnvError } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 
@@ -18,7 +18,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const supabase = createSupabaseBrowserClient();
+      const supabase = supabaseBrowser();
       const { error: signInError } = await supabase.auth.signInWithOtp({
         email,
         options: {
@@ -45,7 +45,7 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setError(null);
     try {
-      const supabase = createSupabaseBrowserClient();
+      const supabase = supabaseBrowser();
       const {
         data: { url },
         error: oauthError

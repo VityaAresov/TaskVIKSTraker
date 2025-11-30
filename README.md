@@ -16,15 +16,15 @@ A minimalistic yet powerful task-tracking workspace inspired by ClickUp + Kaiten
 npm install
 ```
 
-### 2) Configure environment
-Copy `.env.example` to `.env.local`. It is prefilled with the provided Supabase project keys:
+### 2) Configure environment (.env.local)
+Next.js only loads `.env.local`. This repo ships an `.env.example` template **and a generated `.env.local`**. Update the real values there before running:
 
-- `NEXT_PUBLIC_SUPABASE_URL` – https://jjainebdqrdqvxjnoejz.supabase.co
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` – eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpqYWluZWJkcXJkcXZ4am5vZWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0OTAyODMsImV4cCI6MjA4MDA2NjI4M30.KykQsE2s2Cyg5Cr12L6f532C3VT0SEzTDQKq3BBYGFM
-- `SUPABASE_SERVICE_ROLE_KEY` – leave empty or set privately in Vercel if you use server actions.
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (leave blank if unused; set privately in Vercel for server-side tasks)
+- `NEXT_PUBLIC_SITE_URL` (default `http://localhost:3000`)
 
-Both the `NEXT_PUBLIC_*` names and server-only `SUPABASE_URL`/`SUPABASE_ANON_KEY` keys are accepted (they resolve to the same values at runtime).
-- `NEXT_PUBLIC_SITE_URL` – base site URL used for OAuth redirects and email magic link callbacks
+If `.env.local` is missing, `npm install` will auto-create it from `.env.example`. Place your real Supabase URL and anon key in `.env.local`; it is the only file Next.js reads for env configuration.
 
 ### 3) Provision database
 Run the SQL schema in `supabase/schema.sql` on your Supabase project. You can use the Supabase SQL editor or CLI:

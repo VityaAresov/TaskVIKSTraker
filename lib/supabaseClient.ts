@@ -1,24 +1,22 @@
-import { createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs';
 import { createClient } from '@supabase/supabase-js';
-import { ensureSupabaseEnv, SupabaseEnvError } from './supabaseEnv';
+import { resolveSupabasePublicEnv, resolveSupabaseServiceKey, SupabaseEnvError } from './supabaseEnv';
 
-function getSupabaseEnv() {
-  const { supabaseUrl, supabaseAnonKey } = ensureSupabaseEnv();
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  return { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey };
+let browserClient: ReturnType<typeof createClient> | null = null;
+
+function getPublicClient() {
+  if (!browserClient) {
+    const { supabaseUrl, supabaseAnonKey } = resolveSupabasePublicEnv();
+    browserClient = createClient(supabaseUrl, supabaseAnonKey);
+  }
+  return browserClient;
 }
 
-export const createSupabaseBrowserClient = () => {
-  const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
-  return createBrowserSupabaseClient({ supabaseUrl, supabaseKey: supabaseAnonKey });
-};
+export const supabaseBrowser = getPublicClient;
 
-export const createServiceRoleClient = () => {
-  const { supabaseUrl, supabaseServiceRoleKey } = getSupabaseEnv();
-  if (!supabaseServiceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
-  }
-  return createClient(supabaseUrl, supabaseServiceRoleKey);
-};
+export function createServiceRoleClient() {
+  const { supabaseUrl } = resolveSupabasePublicEnv();
+  const serviceRoleKey = resolveSupabaseServiceKey();
+  return createClient(supabaseUrl, serviceRoleKey);
+}
 
 export { SupabaseEnvError };

@@ -12,7 +12,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const { data: assignees } = await supabase.from('task_assignees').select('user_id').eq('task_id', params.id);
-  const isAssignee = assignees?.some((a) => a.user_id === user.id);
+  const isAssignee = (assignees ?? []).some(({ user_id }: { user_id: string }) => user_id === user.id);
   if (!canManageProjects(user.role) && !isAssignee && user.id !== existing.created_by) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
