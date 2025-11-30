@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createServiceRoleClient } from '../../../lib/supabaseClient';
+import { createSupabaseServerClient } from '../../../lib/supabaseClient';
 import { getCurrentUser } from '../../../lib/auth';
 import { canManageProjects } from '../../../lib/permissions';
 
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  const supabase = createServiceRoleClient();
+  const supabase = createSupabaseServerClient();
   const { data } = await supabase.from('projects').select('*');
   return NextResponse.json({ projects: data ?? [] });
 }
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!canManageProjects(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const payload = await request.json();
-  const supabase = createServiceRoleClient();
+  const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from('projects')
     .insert({ name: payload.name, description: payload.description, owner_id: user.id })

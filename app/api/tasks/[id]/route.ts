@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServiceRoleClient } from '../../../../lib/supabaseClient';
+import { createSupabaseServerClient } from '../../../../lib/supabaseClient';
 import { getCurrentUser } from '../../../../lib/auth';
 import { canManageProjects } from '../../../../lib/permissions';
 
@@ -7,10 +7,15 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const payload = await request.json();
-  const supabase = createServiceRoleClient();
+  const supabase = createSupabaseServerClient();
   const { data: existing } = await supabase.from('tasks').select('*').eq('id', params.id).single();
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  if (!canManageProjects(user.role) && user.id !== existing.created_by) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const { data: assignees } = await supabase.from('task_assignees').select('user_id').eq('task_id', params.id);
+  const isAssignee = assignees?.some((a) => a.user_id === user.id);
+  if (!canManageProjects(user.role) && !isAssignee && user.id !== existing.created_by) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   const { data, error } = await supabase
     .from('tasks')
@@ -32,7 +37,7 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!canManageProjects(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  const supabase = createServiceRoleClient();
+  const supabase = createSupabaseServerClient();
   const { error } = await supabase.from('tasks').delete().eq('id', params.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true });

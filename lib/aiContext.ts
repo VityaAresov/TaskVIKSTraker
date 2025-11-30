@@ -1,8 +1,10 @@
-import { createServiceRoleClient } from './supabaseClient';
+import { createServiceRoleClient, createSupabaseServerClient } from './supabaseClient';
 import { type AppUser } from './auth';
 
 export async function getAIContext(user: AppUser) {
-  const supabase = createServiceRoleClient();
+  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createServiceRoleClient()
+    : createSupabaseServerClient();
   const { data: projects } = await supabase
     .from('projects')
     .select('id, name, description, owner_id')

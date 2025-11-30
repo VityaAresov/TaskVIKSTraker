@@ -1,4 +1,4 @@
-import { createServiceRoleClient } from './supabaseClient';
+import { createServiceRoleClient, createSupabaseServerClient } from './supabaseClient';
 import { type AppUser } from './auth';
 
 export type AIMutation =
@@ -7,7 +7,9 @@ export type AIMutation =
   | { type: 'update_progress'; payload: { task_id: string; progress_current: number } };
 
 export async function applyAIMutations(user: AppUser, actions: AIMutation[]) {
-  const supabase = createServiceRoleClient();
+  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createServiceRoleClient()
+    : createSupabaseServerClient();
   const allowed = user.role === 'manager' || user.role === 'owner';
   if (!allowed) {
     return { applied: [], rejected: actions.map((action) => ({ action, reason: 'read-only role' })) };

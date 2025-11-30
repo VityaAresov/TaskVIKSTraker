@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { createSupabaseServerClient, createServiceRoleClient } from './supabaseClient';
+import { createSupabaseServerClient } from './supabaseClient';
 import { type User } from '@supabase/supabase-js';
 
 export type AppRole = 'worker' | 'manager' | 'owner';
@@ -23,7 +23,7 @@ export async function getSessionUser(): Promise<{ user: User | null }> {
 export async function getCurrentUser(): Promise<AppUser | null> {
   const { user } = await getSessionUser();
   if (!user) return null;
-  const supabase = createServiceRoleClient();
+  const supabase = createSupabaseServerClient();
   const { data } = await supabase
     .from('users')
     .select('id, email, full_name, avatar_url, role')

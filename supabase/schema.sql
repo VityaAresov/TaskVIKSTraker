@@ -122,6 +122,10 @@ create policy "Select tasks with visibility" on tasks for select using (
     else false
   end
 );
+create policy "Managers insert tasks" on tasks for insert with check ((select role from users where id = auth.uid()) in ('manager','owner'));
+create policy "Managers update tasks" on tasks for update using ((select role from users where id = auth.uid()) in ('manager','owner'));
+create policy "Assignees update progress" on tasks for update using (exists(select 1 from task_assignees ta where ta.task_id = id and ta.user_id = auth.uid()));
+create policy "Managers delete tasks" on tasks for delete using ((select role from users where id = auth.uid()) in ('manager','owner'));
 create policy "Assignee can view" on task_assignees for select using (auth.uid() = user_id);
 create policy "Comments visible" on task_comments for select using (auth.uid() = author_id or auth.uid() in (select user_id from task_assignees where task_id = task_comments.task_id));
 create policy "Notifications per user" on notifications for select using (auth.uid() = user_id);
