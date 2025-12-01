@@ -8,7 +8,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const payload = await request.json();
   const supabase = createSupabaseServerClient();
-  const { data: existing } = await supabase.from('tasks').select('*').eq('id', Number(params.id)).single();
+  const { data: existing, error: existingError } = await supabase.from('tasks').select('*').eq('id', Number(params.id)).single();
+  if (existingError && existingError.message.includes('subproject_id')) {
+    console.warn('[tasks PATCH] subproject_id missing in schema when loading task');
+  } else if (existingError) {
+    return NextResponse.json({ error: existingError.message }, { status: 400 });
+  }
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const { data: assignees } = await supabase.from('task_assignees').select('user_id').eq('task_id', Number(params.id));
@@ -40,7 +45,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
   }
 
-  const { data, error } = await supabase.from('tasks').update(updates).eq('id', Number(params.id)).select().single();
+  let { data, error } = await supabase.from('tasks').update(updates).eq('id', Number(params.id)).select().single();
+  if (error && error.message.includes('subproject_id')) {
+    delete updates.subproject_id;
+    ({ data, error } = await supabase.from('tasks').update(updates).eq('id', Number(params.id)).select().single());
+  }
+
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   if (canManage && Array.isArray(payload.assignees)) {

@@ -51,6 +51,7 @@ create table if not exists tasks (
   priority task_priority not null default 'medium',
   visible_to_role visible_role not null default 'all',
   visible_to_user_ids uuid[],
+  start_date date,
   due_date date,
   created_by uuid references users(id),
   created_at timestamp with time zone default now(),

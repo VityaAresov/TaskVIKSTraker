@@ -18,25 +18,37 @@ export async function fetchWorkspaceTasks(
   const supabase = client ?? createServerComponentClient({ cookies });
   const hasSubproject = subprojectId !== null && subprojectId !== undefined && !Number.isNaN(subprojectId);
 
-  let query = supabase
-    .from('tasks')
-    .select(
-      `id, project_id, subproject_id, sprint_id, parent_task_id, title, description, status, start_date, due_date,
-       progress_current, progress_target, priority, visible_to_role, visible_to_user_ids,
-       task_assignees(user_id, users(id, full_name, avatar_url, role)),
-       task_dependencies(depends_on_task_id),
-       task_comments(id)`
-    )
-    .eq('project_id', projectId)
-    .order('id', { ascending: true });
+  const baseSelect =
+    `id, project_id, sprint_id, parent_task_id, title, description, status, start_date, due_date,
+     progress_current, progress_target, priority, visible_to_role, visible_to_user_ids,
+     task_assignees(user_id, users(id, full_name, avatar_url, role)),
+     task_dependencies(depends_on_task_id),
+     task_comments(id)`;
 
-  if (hasSubproject) {
-    query = query.eq('subproject_id', subprojectId);
-  } else {
-    query = query.is('subproject_id', null);
+  const runQuery = async (withSubproject: boolean) => {
+    let select = baseSelect;
+    let query = supabase.from('tasks').select(select).eq('project_id', projectId).order('id', { ascending: true });
+
+    if (withSubproject && hasSubproject) {
+      select = `${baseSelect}, subproject_id`;
+      query = supabase.from('tasks').select(select).eq('project_id', projectId).order('id', { ascending: true });
+      query = query.eq('subproject_id', subprojectId);
+    } else if (withSubproject) {
+      select = `${baseSelect}, subproject_id`;
+      query = supabase.from('tasks').select(select).eq('project_id', projectId).order('id', { ascending: true });
+      query = query.is('subproject_id', null);
+    }
+
+    return query;
+  };
+
+  let { data, error } = await runQuery(true);
+
+  if (error && error.message.includes("subproject_id")) {
+    console.warn('[workspace tasks] subproject_id missing, retrying without subproject filter');
+    const fallback = await runQuery(false);
+    ({ data, error } = await fallback);
   }
-
-  const { data, error } = await query;
 
   if (error) {
     console.error('Failed to load workspace tasks', { projectId, subprojectId, error });

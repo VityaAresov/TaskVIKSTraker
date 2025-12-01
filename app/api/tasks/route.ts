@@ -14,17 +14,33 @@ export async function GET(request: Request) {
   const projectId = projectIdParam ? Number(projectIdParam) : null;
   const sprintId = sprintIdParam ? Number(sprintIdParam) : null;
   const subprojectId = subprojectIdParam ? Number(subprojectIdParam) : null;
-  let query = supabase.from('tasks').select('*, task_assignees(user_id), task_dependencies(depends_on_task_id)');
-  if (projectId !== null && !Number.isNaN(projectId)) query = query.eq('project_id', projectId);
-  if (subprojectIdParam !== null) {
-    if (subprojectId !== null && !Number.isNaN(subprojectId)) {
-      query = query.eq('subproject_id', subprojectId);
-    } else {
-      query = query.is('subproject_id', null);
+  const baseSelect = 'id, project_id, sprint_id, parent_task_id, title, description, status, start_date, due_date, progress_current, progress_target, priority, visible_to_role, visible_to_user_ids, created_by, created_at, updated_at, task_assignees(user_id), task_dependencies(depends_on_task_id)';
+
+  const runQuery = (includeSub: boolean) => {
+    let select = baseSelect;
+    let query = supabase.from('tasks').select(select);
+    if (projectId !== null && !Number.isNaN(projectId)) query = query.eq('project_id', projectId);
+    if (includeSub && subprojectIdParam !== null) {
+      select = `${baseSelect}, subproject_id`;
+      query = supabase.from('tasks').select(select);
+      if (projectId !== null && !Number.isNaN(projectId)) query = query.eq('project_id', projectId);
+      if (subprojectId !== null && !Number.isNaN(subprojectId)) {
+        query = query.eq('subproject_id', subprojectId);
+      } else {
+        query = query.is('subproject_id', null);
+      }
     }
+    if (sprintId !== null && !Number.isNaN(sprintId)) query = query.eq('sprint_id', sprintId);
+    return query;
+  };
+
+  let { data, error } = await runQuery(true);
+
+  if (error && error.message.includes('subproject_id')) {
+    console.warn('[tasks GET] subproject_id missing, retrying without subproject filter');
+    ({ data, error } = await runQuery(false));
   }
-  if (sprintId !== null && !Number.isNaN(sprintId)) query = query.eq('sprint_id', sprintId);
-  const { data, error } = await query;
+
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ tasks: data ?? [] });
 }
@@ -43,27 +59,38 @@ export async function POST(request: Request) {
   if (!payload.title || Number.isNaN(projectId)) {
     return NextResponse.json({ error: 'Project and title are required' }, { status: 400 });
   }
-  const { data, error } = await supabase
-    .from('tasks')
-    .insert({
-      project_id: projectId,
-      subproject_id: subprojectId,
-      sprint_id: payload.sprint_id ?? null,
-      parent_task_id: payload.parent_task_id ?? null,
-      title: payload.title,
-      description: payload.description,
-      status: payload.status ?? 'todo',
-      progress_current: payload.progress_current ?? 0,
-      progress_target: payload.progress_target ?? 100,
-      priority: payload.priority ?? 'medium',
-      visible_to_role: payload.visible_to_role ?? 'all',
-      visible_to_user_ids: payload.visible_to_user_ids ?? null,
-      due_date: payload.due_date,
-      start_date: payload.start_date ?? null,
-      created_by: user.id
-    })
-    .select()
-    .single();
+  const insertPayload: Record<string, any> = {
+    project_id: projectId,
+    sprint_id: payload.sprint_id ?? null,
+    parent_task_id: payload.parent_task_id ?? null,
+    title: payload.title,
+    description: payload.description,
+    status: payload.status ?? 'todo',
+    progress_current: payload.progress_current ?? 0,
+    progress_target: payload.progress_target ?? 100,
+    priority: payload.priority ?? 'medium',
+    visible_to_role: payload.visible_to_role ?? 'all',
+    visible_to_user_ids: payload.visible_to_user_ids ?? null,
+    due_date: payload.due_date,
+    start_date: payload.start_date ?? null,
+    created_by: user.id
+  };
+
+  if (subprojectId !== null) insertPayload.subproject_id = subprojectId;
+
+  const attemptInsert = async (withSub: boolean) => {
+    const payloadToUse = { ...insertPayload };
+    if (!withSub) delete payloadToUse.subproject_id;
+    return supabase.from('tasks').insert(payloadToUse).select().single();
+  };
+
+  let { data, error } = await attemptInsert(true);
+
+  if (error && error.message.includes('subproject_id')) {
+    console.warn('[tasks POST] subproject_id missing, retrying without subproject column');
+    ({ data, error } = await attemptInsert(false));
+  }
+
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   if (payload.assignees?.length) {
