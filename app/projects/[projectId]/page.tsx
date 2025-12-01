@@ -1,4 +1,5 @@
 import { ProjectBoard } from '../../../components/tasks/ProjectBoard';
+import { SubprojectSwitcher } from '../../../components/tasks/SubprojectSwitcher';
 import { fetchProjectColumnLabels, fetchWorkspaceTasks } from '../../../lib/workspaceData';
 import { getSupabaseServerClient } from '../../../lib/supabaseServer';
 import type { WorkspaceTask } from '../../../lib/workspaceTypes';
@@ -8,6 +9,7 @@ export const revalidate = 0;
 
 type ProjectPageProps = {
   params: { projectId: string };
+  searchParams?: { [key: string]: string | string[] | undefined };
 };
 
 type ProjectRow = {
@@ -29,7 +31,7 @@ function ErrorBanner({ message }: { message: string }) {
   );
 }
 
-export default async function ProjectPage({ params }: ProjectPageProps) {
+export default async function ProjectPage({ params, searchParams }: ProjectPageProps) {
   const projectId = Number(params.projectId);
   if (!Number.isFinite(projectId)) {
     console.error('[project page] invalid project id', params.projectId);
@@ -73,8 +75,28 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
   const columnLabels = await fetchProjectColumnLabels(baseProjectId, supabase, project as any);
 
+  const { data: subprojectsData, error: subprojectsError } = await supabase
+    .from('projects')
+    .select('id, name, parent_project_id')
+    .eq('parent_project_id', baseProjectId);
+
+  if (subprojectsError) {
+    console.error('[project page] failed to load subprojects', subprojectsError);
+  }
+
+  const subprojects = subprojectsData ?? [];
+  const rawSubprojectId = searchParams?.subprojectId ?? searchParams?.subproject_id;
+  const parsedSubprojectId = Array.isArray(rawSubprojectId)
+    ? Number(rawSubprojectId[0])
+    : rawSubprojectId
+      ? Number(rawSubprojectId)
+      : null;
+  const activeSubprojectId = Number.isFinite(parsedSubprojectId)
+    ? Number(parsedSubprojectId)
+    : null;
+
   const [tasks, usersResp] = await Promise.all([
-    fetchWorkspaceTasks(baseProjectId, supabase) as Promise<WorkspaceTask[]>,
+    fetchWorkspaceTasks(baseProjectId, supabase, activeSubprojectId) as Promise<WorkspaceTask[]>,
     supabase.from('users').select('id, full_name, role, avatar_url')
   ]);
 
@@ -87,14 +109,18 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const role = users.find((u) => u.id === session.user.id)?.role ?? 'worker';
 
   return (
-    <ProjectBoard
-      tasks={tasks}
-      role={role}
-      currentUserId={session.user.id}
-      users={users}
-      workspaceId={baseProjectId}
-      columnLabels={columnLabels}
-      projectId={baseProjectId}
-    />
+    <>
+      <SubprojectSwitcher projectId={baseProjectId} subprojects={subprojects} role={role} />
+      <ProjectBoard
+        tasks={tasks}
+        role={role}
+        currentUserId={session.user.id}
+        users={users}
+        workspaceId={baseProjectId}
+        columnLabels={columnLabels}
+        projectId={baseProjectId}
+        subprojectId={activeSubprojectId}
+      />
+    </>
   );
 }

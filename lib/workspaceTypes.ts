@@ -1,6 +1,7 @@
 export type WorkspaceTask = {
   id: string;
-  project_id?: number;
+  project_id: number;
+  subproject_id?: number | null;
   title: string;
   description?: string | null;
   status: 'backlog' | 'todo' | 'in_progress' | 'blocked' | 'done';

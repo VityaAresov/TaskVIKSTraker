@@ -16,7 +16,8 @@ export function ProjectBoard({
   users,
   workspaceId,
   columnLabels,
-  projectId
+  projectId,
+  subprojectId
 }: {
   tasks: WorkspaceTask[];
   role: string;
@@ -25,6 +26,7 @@ export function ProjectBoard({
   workspaceId: number;
   columnLabels: { backlog: string; todo: string; in_progress: string; blocked: string; done: string };
   projectId: number;
+  subprojectId?: number | null;
 }) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState('all');
@@ -184,6 +186,7 @@ export function ProjectBoard({
         currentUserId={currentUserId}
         onClose={() => setShowCreate(false)}
         onSaved={(task) => setItems((prev) => [...prev, task])}
+        subprojectId={subprojectId ?? undefined}
       />
 
       {editingTaskId && (
@@ -196,6 +199,7 @@ export function ProjectBoard({
           role={role}
           currentUserId={currentUserId}
           initialTask={items.find((t) => t.id === editingTaskId)}
+          subprojectId={subprojectId ?? undefined}
           onClose={() => setEditingTaskId(null)}
           onSaved={(task) =>
             setItems((prev) => prev.map((t) => (t.id === task.id ? { ...t, ...task } : t)))

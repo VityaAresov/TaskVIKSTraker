@@ -9,9 +9,11 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function CalendarPage({
-  params
+  params,
+  searchParams
 }: {
   params: { projectId: string };
+  searchParams?: { [key: string]: string | string[] | undefined };
 }) {
   const supabase = createServerComponentClient({ cookies });
   const {
@@ -45,8 +47,16 @@ export default async function CalendarPage({
     return <div className="text-sm text-muted">Project not found.</div>;
   }
 
+  const rawSubprojectId = searchParams?.subprojectId ?? searchParams?.subproject_id;
+  const parsedSubprojectId = Array.isArray(rawSubprojectId)
+    ? Number(rawSubprojectId[0])
+    : rawSubprojectId
+      ? Number(rawSubprojectId)
+      : null;
+  const activeSubprojectId = Number.isFinite(parsedSubprojectId) ? Number(parsedSubprojectId) : null;
+
   const [tasks, usersResp] = await Promise.all([
-    fetchWorkspaceTasks(projectId, supabase) as Promise<WorkspaceTask[]>,
+    fetchWorkspaceTasks(projectId, supabase, activeSubprojectId) as Promise<WorkspaceTask[]>,
     supabase.from('users').select('id, full_name, role, avatar_url')
   ]);
   const users = usersResp.data ?? [];

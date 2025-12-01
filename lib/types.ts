@@ -30,6 +30,7 @@ export type Sprint = {
 export type Task = {
   id: number;
   project_id: number;
+  subproject_id?: number | null;
   sprint_id: number | null;
   parent_task_id: number | null;
   title: string;
