@@ -18,49 +18,47 @@ export async function fetchWorkspaceTasks(
   const supabase = client ?? createServerComponentClient({ cookies });
   const hasSubproject = subprojectId !== null && subprojectId !== undefined && !Number.isNaN(subprojectId);
 
-  const baseSelect =
-    `id, project_id, sprint_id, parent_task_id, title, description, status, start_date, due_date,
-     progress_current, progress_target, progress_total, priority, visible_to_role, visible_to_user_ids,
+  // Keep the select set minimal and aligned to the current schema to avoid cache errors.
+  const selectColumns =
+    `id, project_id, subproject_id, sprint_id, parent_task_id, title, description, status, start_date, due_date,
+     progress_current, progress_target, priority, visible_to_role, visible_to_user_ids,
      task_assignees(user_id, users(id, full_name, avatar_url, role)),
      task_dependencies(depends_on_task_id),
      task_comments(id)`;
 
-  const runQuery = async (withSubproject: boolean) => {
-    let select = baseSelect;
-    let query = supabase.from('tasks').select(select).eq('project_id', projectId).order('id', { ascending: true });
-
-    if (withSubproject && hasSubproject) {
-      select = `${baseSelect}, subproject_id`;
-      query = supabase.from('tasks').select(select).eq('project_id', projectId).order('id', { ascending: true });
-      query = query.eq('subproject_id', subprojectId);
-    } else if (withSubproject) {
-      select = `${baseSelect}, subproject_id`;
-      query = supabase.from('tasks').select(select).eq('project_id', projectId).order('id', { ascending: true });
-      query = query.is('subproject_id', null);
+  const runQuery = (withSubproject: boolean) => {
+    let query = supabase.from('tasks').select(selectColumns).eq('project_id', projectId).order('id', { ascending: true });
+    if (withSubproject) {
+      if (hasSubproject) {
+        query = query.eq('subproject_id', subprojectId);
+      } else {
+        query = query.is('subproject_id', null);
+      }
     }
-
     return query;
   };
 
+  // Try with subproject awareness first; if the column is missing in the remote schema, retry without it.
   let { data, error } = await runQuery(true);
 
-  if (error && error.message.includes('subproject_id')) {
+  if (error && error.message.toLowerCase().includes('subproject')) {
     console.warn('[workspace tasks] subproject_id missing, retrying without subproject filter');
-    const fallback = await runQuery(false);
-    ({ data, error } = await fallback);
+    ({ data, error } = await runQuery(false));
   }
 
   if (error && error.message.toLowerCase().includes('column')) {
-    console.warn('[workspace tasks] column mismatch, falling back to select *', { error });
-    const fallback = supabase
+    console.warn('[workspace tasks] column mismatch, falling back to select without subproject_id');
+    ({ data, error } = await supabase
       .from('tasks')
-      .select('*')
+      .select(
+        `id, project_id, sprint_id, parent_task_id, title, description, status, start_date, due_date,
+         progress_current, progress_target, priority, visible_to_role, visible_to_user_ids,
+         task_assignees(user_id, users(id, full_name, avatar_url, role)),
+         task_dependencies(depends_on_task_id),
+         task_comments(id)`
+      )
       .eq('project_id', projectId)
-      .order('id', { ascending: true });
-    if (hasSubproject) {
-      fallback.eq('subproject_id', subprojectId as any);
-    }
-    ({ data, error } = await fallback);
+      .order('id', { ascending: true }));
   }
 
   if (error) {
@@ -89,7 +87,7 @@ export async function fetchWorkspaceTasks(
       description: task.description,
       status: task.status,
       progress_current: task.progress_current ?? 0,
-      progress_target: task.progress_target ?? task.progress_total ?? 100,
+      progress_target: task.progress_target ?? 100,
       priority: task.priority,
       visible_to_role: task.visible_to_role,
       visible_to_user_ids: task.visible_to_user_ids,
