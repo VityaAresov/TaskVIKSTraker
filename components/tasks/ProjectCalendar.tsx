@@ -71,16 +71,9 @@ export function ProjectCalendar({
   const tasksByDay = useMemo(() => {
     return days.map((day) => {
       const daily = filtered.filter((task) => {
-        if (!task.due_date && !task.start_date) return false;
-        const start = task.start_date ? new Date(task.start_date) : task.due_date ? new Date(task.due_date) : null;
-        const end = task.due_date ? new Date(task.due_date) : start;
-        if (!start) return false;
-        return end
-          ? isWithinInterval(day, {
-              start,
-              end
-            }) || isSameDay(day, start)
-          : isSameDay(day, start);
+        if (!task.due_date) return false;
+        const date = new Date(task.due_date);
+        return isSameDay(day, date);
       });
       return { day, tasks: daily };
     });
@@ -88,7 +81,7 @@ export function ProjectCalendar({
 
   const today = new Date();
 
-  const undated = filtered.filter((task) => !task.due_date && !task.start_date);
+  const undated = filtered.filter((task) => !task.due_date);
 
   const handleSaved = (task: WorkspaceTask) => {
     setItems((prev) => {
@@ -214,7 +207,6 @@ export function ProjectCalendar({
           mode={selectedTaskId === 'new' ? 'create' : 'edit'}
           workspaceId={workspaceId}
           projectId={projectId}
-          subprojectId={workspaceId !== projectId ? workspaceId : null}
           users={users}
           role={role}
           currentUserId={currentUserId}

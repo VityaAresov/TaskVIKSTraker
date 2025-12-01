@@ -13,7 +13,6 @@ export type TaskModalProps = {
   mode: 'create' | 'edit';
   workspaceId: number;
   projectId: number;
-  subprojectId?: number | null;
   users: { id: string; full_name: string; role: string; avatar_url?: string | null }[];
   role: string;
   currentUserId: string;
@@ -29,7 +28,6 @@ export function TaskModal({
   mode,
   workspaceId,
   projectId,
-  subprojectId,
   users,
   role,
   currentUserId,
@@ -42,7 +40,6 @@ export function TaskModal({
   const [status, setStatus] = useState<Task['status']>('todo');
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [dueDate, setDueDate] = useState<string | ''>('');
-  const [startDate, setStartDate] = useState<string | ''>('');
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTarget, setProgressTarget] = useState(100);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -61,7 +58,6 @@ export function TaskModal({
       setStatus(initialTask.status);
       setAssigneeIds(initialTask.assigneeIds ?? []);
       setDueDate(initialTask.due_date ?? '');
-      setStartDate(initialTask.start_date ?? '');
       setProgressCurrent(initialTask.progress_current ?? 0);
       setProgressTarget(initialTask.progress_target ?? 100);
     } else {
@@ -70,7 +66,6 @@ export function TaskModal({
       setStatus('todo');
       setAssigneeIds([]);
       setDueDate('');
-      setStartDate('');
       setProgressCurrent(0);
       setProgressTarget(100);
     }
@@ -109,14 +104,12 @@ export function TaskModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           project_id: projectId,
-          subproject_id: subprojectId ?? (workspaceId !== projectId ? workspaceId : null),
           title,
           description,
           status,
           progress_current: progressCurrent,
           progress_target: progressTarget,
           due_date: dueDate || null,
-          start_date: startDate || null,
           assignees: assigneeIds
         })
       });
@@ -132,7 +125,6 @@ export function TaskModal({
       onSaved({
         id: String(json.task.id),
         project_id: projectId,
-        subproject_id: json.task?.subproject_id ?? subprojectId ?? null,
         title,
         description,
         status,
@@ -140,7 +132,6 @@ export function TaskModal({
         progress_target: progressTarget,
         assignees,
         due_date: dueDate || null,
-        start_date: startDate || null,
         depends_on: [],
         visible_to_role: 'all',
         visible_to_user_ids: null,
@@ -160,14 +151,12 @@ export function TaskModal({
     progress_current: progressCurrent,
     progress_target: progressTarget,
     due_date: dueDate || null,
-    start_date: startDate || null,
     title,
     description
   };
 
   if (canManage) {
     payload.assignees = assigneeIds;
-    payload.subproject_id = subprojectId ?? (workspaceId !== projectId ? workspaceId : null);
   }
 
     const res = await fetch(`/api/tasks/${initialTask.id}`, {
@@ -191,10 +180,8 @@ export function TaskModal({
       ...json.task,
       assignees,
       assigneeIds: assigneeIds.length ? assigneeIds : initialTask.assigneeIds,
-      start_date: startDate || null,
       progress_target: json.task?.progress_target ?? progressTarget,
-      comments_count: comments.length,
-      subproject_id: json.task?.subproject_id ?? initialTask.subproject_id ?? null
+      comments_count: comments.length
     });
     onClose();
   };
@@ -249,10 +236,6 @@ export function TaskModal({
                   <option value="blocked">Blocked</option>
                   <option value="done">Done</option>
                 </Select>
-              </label>
-              <label className="space-y-1">
-                <span className="text-xs text-muted">Start date</span>
-                <Input type="date" value={startDate ?? ''} onChange={(e) => setStartDate(e.target.value)} disabled={!canManage} />
               </label>
               <label className="space-y-1">
                 <span className="text-xs text-muted">Due date</span>

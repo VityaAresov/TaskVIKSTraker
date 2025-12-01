@@ -61,6 +61,8 @@ export function ProjectWorkspace({
       const assigneeIds = assignees.map((a) => a.id);
       return {
         ...task,
+        id: String(task.id),
+        parent_task_id: task.parent_task_id ? String(task.parent_task_id) : null,
         assignees,
         assigneeIds,
         comments_count: (task as any).comments_count ?? 0,
@@ -175,7 +177,6 @@ export function ProjectWorkspace({
                 tasks={filteredTasks.map((t) => ({
                   id: t.id,
                   title: t.title,
-                  start_date: t.start_date,
                   due_date: t.due_date,
                   status: t.status,
                   depends_on: t.depends_on ?? []

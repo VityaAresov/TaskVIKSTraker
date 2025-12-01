@@ -9,11 +9,9 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function TimelinePage({
-  params,
-  searchParams
+  params
 }: {
   params: { projectId: string };
-  searchParams: Record<string, string | undefined>;
 }) {
   const supabase = createServerComponentClient({ cookies });
   const {
@@ -47,12 +45,8 @@ export default async function TimelinePage({
     return <div className="text-sm text-muted">Project not found.</div>;
   }
 
-  const parsedSub = searchParams.subprojectId ? Number(searchParams.subprojectId) : NaN;
-  const activeSubprojectId = Number.isNaN(parsedSub) ? null : parsedSub;
-  const activeWorkspaceId = activeSubprojectId ?? projectId;
-
   const [tasks, usersResp] = await Promise.all([
-    fetchWorkspaceTasks(projectId, supabase, activeSubprojectId) as Promise<WorkspaceTask[]>,
+    fetchWorkspaceTasks(projectId, supabase) as Promise<WorkspaceTask[]>,
     supabase.from('users').select('id, full_name, role, avatar_url')
   ]);
   const users = usersResp.data ?? [];
@@ -66,7 +60,7 @@ export default async function TimelinePage({
         users={users}
         role={role}
         currentUserId={session.user.id}
-        workspaceId={activeWorkspaceId}
+        workspaceId={projectId}
         projectId={projectId}
       />
     </div>

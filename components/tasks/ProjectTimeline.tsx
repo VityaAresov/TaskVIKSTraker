@@ -18,12 +18,6 @@ const statusTone: Record<WorkspaceTask['status'], string> = {
   done: 'bg-emerald-100 text-emerald-700'
 };
 
-function dateOrFallback(task: WorkspaceTask) {
-  const start = task.start_date ? new Date(task.start_date) : task.due_date ? new Date(task.due_date) : null;
-  const end = task.due_date ? new Date(task.due_date) : start;
-  return { start, end: end ?? start };
-}
-
 export function ProjectTimeline({
   tasks,
   users,
@@ -56,7 +50,14 @@ export function ProjectTimeline({
     });
   }, [assigneeFilter, items, statusFilter]);
 
-  const dated = useMemo(() => filtered.map((task) => ({ task, ...dateOrFallback(task) })), [filtered]);
+  const dated = useMemo(
+    () =>
+      filtered.map((task) => {
+        const date = task.due_date ? new Date(task.due_date) : null;
+        return { task, start: date, end: date };
+      }),
+    [filtered]
+  );
   const datedOnly = dated.filter((t) => t.start && t.end);
   const undated = dated.filter((t) => !t.start || !t.end);
 
@@ -172,7 +173,6 @@ export function ProjectTimeline({
           mode={selectedTaskId === 'new' ? 'create' : 'edit'}
           workspaceId={workspaceId}
           projectId={projectId}
-          subprojectId={workspaceId !== projectId ? workspaceId : null}
           users={users}
           role={role}
           currentUserId={currentUserId}

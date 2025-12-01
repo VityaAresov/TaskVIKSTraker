@@ -9,9 +9,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const payload = await request.json();
   const supabase = createSupabaseServerClient();
   const { data: existing, error: existingError } = await supabase.from('tasks').select('*').eq('id', Number(params.id)).single();
-  if (existingError && existingError.message.includes('subproject_id')) {
-    console.warn('[tasks PATCH] subproject_id missing in schema when loading task');
-  } else if (existingError) {
+  if (existingError) {
     return NextResponse.json({ error: existingError.message }, { status: 400 });
   }
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -35,21 +33,15 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     updates.description = payload.description ?? existing.description;
     updates.title = payload.title ?? existing.title;
     updates.due_date = payload.due_date ?? existing.due_date;
-    updates.start_date = payload.start_date ?? existing.start_date;
     updates.priority = payload.priority ?? existing.priority;
     updates.sprint_id = payload.sprint_id ?? existing.sprint_id;
-    if (payload.subproject_id !== undefined) updates.subproject_id = payload.subproject_id;
   }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
   }
 
-  let { data, error } = await supabase.from('tasks').update(updates).eq('id', Number(params.id)).select().single();
-  if (error && error.message.includes('subproject_id')) {
-    delete updates.subproject_id;
-    ({ data, error } = await supabase.from('tasks').update(updates).eq('id', Number(params.id)).select().single());
-  }
+  const { data, error } = await supabase.from('tasks').update(updates).eq('id', Number(params.id)).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 

@@ -8,7 +8,6 @@ export const revalidate = 0;
 
 type ProjectPageProps = {
   params: { projectId: string };
-  searchParams: Record<string, string | undefined>;
 };
 
 type ProjectRow = {
@@ -30,7 +29,7 @@ function ErrorBanner({ message }: { message: string }) {
   );
 }
 
-export default async function ProjectPage({ params, searchParams }: ProjectPageProps) {
+export default async function ProjectPage({ params }: ProjectPageProps) {
   const projectId = Number(params.projectId);
   if (!Number.isFinite(projectId)) {
     console.error('[project page] invalid project id', params.projectId);
@@ -70,15 +69,12 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
     return <ErrorBanner message="We could not load this project. Please try again later or contact support." />;
   }
 
-  const parsedSub = searchParams.subprojectId ? Number(searchParams.subprojectId) : NaN;
   const baseProjectId = typeof project.id === 'number' ? project.id : Number(project.id);
-  const activeSubprojectId = Number.isNaN(parsedSub) ? null : parsedSub;
-  const activeWorkspaceId = activeSubprojectId ?? baseProjectId;
 
   const columnLabels = await fetchProjectColumnLabels(baseProjectId, supabase, project as any);
 
   const [tasks, usersResp] = await Promise.all([
-    fetchWorkspaceTasks(baseProjectId, supabase, activeSubprojectId) as Promise<WorkspaceTask[]>,
+    fetchWorkspaceTasks(baseProjectId, supabase) as Promise<WorkspaceTask[]>,
     supabase.from('users').select('id, full_name, role, avatar_url')
   ]);
 
@@ -96,10 +92,9 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
       role={role}
       currentUserId={session.user.id}
       users={users}
-      workspaceId={activeWorkspaceId}
+      workspaceId={baseProjectId}
       columnLabels={columnLabels}
       projectId={baseProjectId}
-      subprojectId={activeSubprojectId}
     />
   );
 }

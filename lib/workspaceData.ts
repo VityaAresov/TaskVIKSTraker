@@ -10,59 +10,23 @@ const defaultColumnLabels = {
   done: 'Done'
 } as const;
 
-export async function fetchWorkspaceTasks(
-  projectId: number,
-  client?: any,
-  subprojectId?: number | null
-): Promise<WorkspaceTask[]> {
+export async function fetchWorkspaceTasks(projectId: number, client?: any): Promise<WorkspaceTask[]> {
   const supabase = client ?? createServerComponentClient({ cookies });
-  const hasSubproject = subprojectId !== null && subprojectId !== undefined && !Number.isNaN(subprojectId);
 
-  // Keep the select set minimal and aligned to the current schema to avoid cache errors.
-  const selectColumns =
-    `id, project_id, subproject_id, sprint_id, parent_task_id, title, description, status, start_date, due_date,
-     progress_current, progress_target, priority, visible_to_role, visible_to_user_ids,
-     task_assignees(user_id, users(id, full_name, avatar_url, role)),
-     task_dependencies(depends_on_task_id),
-     task_comments(id)`;
-
-  const runQuery = (withSubproject: boolean) => {
-    let query = supabase.from('tasks').select(selectColumns).eq('project_id', projectId).order('id', { ascending: true });
-    if (withSubproject) {
-      if (hasSubproject) {
-        query = query.eq('subproject_id', subprojectId);
-      } else {
-        query = query.is('subproject_id', null);
-      }
-    }
-    return query;
-  };
-
-  // Try with subproject awareness first; if the column is missing in the remote schema, retry without it.
-  let { data, error } = await runQuery(true);
-
-  if (error && error.message.toLowerCase().includes('subproject')) {
-    console.warn('[workspace tasks] subproject_id missing, retrying without subproject filter');
-    ({ data, error } = await runQuery(false));
-  }
-
-  if (error && error.message.toLowerCase().includes('column')) {
-    console.warn('[workspace tasks] column mismatch, falling back to select without subproject_id');
-    ({ data, error } = await supabase
-      .from('tasks')
-      .select(
-        `id, project_id, sprint_id, parent_task_id, title, description, status, start_date, due_date,
-         progress_current, progress_target, priority, visible_to_role, visible_to_user_ids,
-         task_assignees(user_id, users(id, full_name, avatar_url, role)),
-         task_dependencies(depends_on_task_id),
-         task_comments(id)`
-      )
-      .eq('project_id', projectId)
-      .order('id', { ascending: true }));
-  }
+  const { data, error } = await supabase
+    .from('tasks')
+    .select(
+      `id, project_id, sprint_id, parent_task_id, title, description, status, due_date,
+       progress_current, progress_target, priority, visible_to_role, visible_to_user_ids,
+       task_assignees(user_id, users(id, full_name, avatar_url, role)),
+       task_dependencies(depends_on_task_id),
+       task_comments(id)`
+    )
+    .eq('project_id', projectId)
+    .order('id', { ascending: true });
 
   if (error) {
-    console.error('Failed to load workspace tasks', { projectId, subprojectId, error });
+    console.error('Failed to load workspace tasks', { projectId, error });
     return [];
   }
 
@@ -82,7 +46,6 @@ export async function fetchWorkspaceTasks(
     return {
       id: String(task.id),
       project_id: typeof task.project_id === 'number' ? task.project_id : Number(task.project_id),
-      subproject_id: task.subproject_id === null || task.subproject_id === undefined ? null : Number(task.subproject_id),
       title: task.title,
       description: task.description,
       status: task.status,
@@ -93,7 +56,6 @@ export async function fetchWorkspaceTasks(
       visible_to_user_ids: task.visible_to_user_ids,
       sprint_id: task.sprint_id,
       parent_task_id: task.parent_task_id ? String(task.parent_task_id) : null,
-      start_date: task.start_date,
       due_date: task.due_date,
       assignees,
       assigneeIds: assignees.map((a: { id: string }) => a.id),

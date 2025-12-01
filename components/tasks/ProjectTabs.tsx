@@ -1,19 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 export function ProjectTabs({ projectId }: { projectId: string }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const subprojectId = searchParams.get('subprojectId');
-  const suffix = subprojectId ? `?subprojectId=${subprojectId}` : '';
   const base = `/projects/${projectId}`;
   const tabs = [
-    { id: 'board', label: 'Board', href: `${base}${suffix}` },
-    { id: 'timeline', label: 'Timeline', href: `${base}/timeline${suffix}` },
-    { id: 'calendar', label: 'Calendar', href: `${base}/calendar${suffix}` },
-    { id: 'resources', label: 'Resources', href: `${base}/resources${suffix}` }
+    { id: 'board', label: 'Board', href: `${base}` },
+    { id: 'timeline', label: 'Timeline', href: `${base}/timeline` },
+    { id: 'calendar', label: 'Calendar', href: `${base}/calendar` },
+    { id: 'resources', label: 'Resources', href: `${base}/resources` }
   ];
 
   return (

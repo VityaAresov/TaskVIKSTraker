@@ -19,17 +19,17 @@ create table if not exists users (
 );
 
 create table if not exists projects (
-  id uuid primary key default gen_random_uuid(),
+  id bigserial primary key,
   name text not null,
   description text,
   owner_id uuid references users(id),
-  parent_project_id uuid references projects(id) on delete cascade,
+  parent_project_id bigint references projects(id) on delete cascade,
   created_at timestamp with time zone default now()
 );
 
 create table if not exists sprints (
-  id uuid primary key default gen_random_uuid(),
-  project_id uuid references projects(id) on delete cascade,
+  id bigserial primary key,
+  project_id bigint references projects(id) on delete cascade,
   name text not null,
   description text,
   start_date date,
@@ -39,39 +39,38 @@ create table if not exists sprints (
 );
 
 create table if not exists tasks (
-  id uuid primary key default gen_random_uuid(),
-  project_id uuid references projects(id) on delete cascade,
-  sprint_id uuid references sprints(id),
-  parent_task_id uuid references tasks(id),
+  id bigserial primary key,
+  project_id bigint references projects(id) on delete cascade,
+  sprint_id bigint references sprints(id),
+  parent_task_id bigint references tasks(id),
   title text not null,
   description text,
   status task_status not null default 'backlog',
+  priority task_priority not null default 'medium',
   progress_current integer default 0,
   progress_target integer default 100,
-  priority task_priority not null default 'medium',
   visible_to_role visible_role not null default 'all',
   visible_to_user_ids uuid[],
-  start_date date,
-  due_date date,
+  due_date timestamptz,
   created_by uuid references users(id),
   created_at timestamp with time zone default now(),
   updated_at timestamp with time zone default now()
 );
 
 create table if not exists task_assignees (
-  task_id uuid references tasks(id) on delete cascade,
+  task_id bigint references tasks(id) on delete cascade,
   user_id uuid references users(id) on delete cascade,
   primary key (task_id, user_id)
 );
 
 create table if not exists task_dependencies (
-  task_id uuid references tasks(id) on delete cascade,
-  depends_on_task_id uuid references tasks(id) on delete cascade
+  task_id bigint references tasks(id) on delete cascade,
+  depends_on_task_id bigint references tasks(id) on delete cascade
 );
 
 create table if not exists task_comments (
   id uuid primary key default gen_random_uuid(),
-  task_id uuid references tasks(id) on delete cascade,
+  task_id bigint references tasks(id) on delete cascade,
   author_id uuid references users(id),
   body text,
   created_at timestamp with time zone default now()
@@ -153,8 +152,4 @@ create table if not exists project_columns (
   "order" int not null default 0,
   unique (project_id, key)
 );
-
--- Workspace-aware tasks
-ALTER TABLE public.tasks
-ADD COLUMN IF NOT EXISTS subproject_id bigint references public.projects(id) on delete cascade;
 

@@ -16,8 +16,7 @@ export function ProjectBoard({
   users,
   workspaceId,
   columnLabels,
-  projectId,
-  subprojectId
+  projectId
 }: {
   tasks: WorkspaceTask[];
   role: string;
@@ -26,7 +25,6 @@ export function ProjectBoard({
   workspaceId: number;
   columnLabels: { backlog: string; todo: string; in_progress: string; blocked: string; done: string };
   projectId: number;
-  subprojectId?: number | null;
 }) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState('all');
@@ -181,7 +179,6 @@ export function ProjectBoard({
         mode="create"
         workspaceId={workspaceId}
         projectId={projectId}
-        subprojectId={subprojectId}
         users={users ?? []}
         role={role}
         currentUserId={currentUserId}
@@ -195,7 +192,6 @@ export function ProjectBoard({
           mode="edit"
           workspaceId={workspaceId}
           projectId={projectId}
-          subprojectId={subprojectId}
           users={users ?? []}
           role={role}
           currentUserId={currentUserId}
