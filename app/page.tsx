@@ -7,6 +7,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Progress } from '../components/ui/Progress';
+import { NewProjectModal } from '../components/dashboard/NewProjectModal';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,9 +80,9 @@ export default async function DashboardPage() {
           <div className="text-sm text-muted">Stay on top of your workspace</div>
         </div>
         {profile?.role !== 'worker' && (
-          <Button asChild>
-            <Link href="/projects/new">New project</Link>
-          </Button>
+          <NewProjectModal>
+            <Button>New project</Button>
+          </NewProjectModal>
         )}
       </div>
 
