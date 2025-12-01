@@ -85,18 +85,9 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
   }
 
   const subprojects = subprojectsData ?? [];
-  const rawSubprojectId = searchParams?.subprojectId ?? searchParams?.subproject_id;
-  const parsedSubprojectId = Array.isArray(rawSubprojectId)
-    ? Number(rawSubprojectId[0])
-    : rawSubprojectId
-      ? Number(rawSubprojectId)
-      : null;
-  const activeSubprojectId = Number.isFinite(parsedSubprojectId)
-    ? Number(parsedSubprojectId)
-    : null;
 
   const [tasks, usersResp] = await Promise.all([
-    fetchWorkspaceTasks(baseProjectId, supabase, activeSubprojectId) as Promise<WorkspaceTask[]>,
+    fetchWorkspaceTasks(baseProjectId, supabase) as Promise<WorkspaceTask[]>,
     supabase.from('users').select('id, full_name, role, avatar_url')
   ]);
 
@@ -119,7 +110,6 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
         workspaceId={baseProjectId}
         columnLabels={columnLabels}
         projectId={baseProjectId}
-        subprojectId={activeSubprojectId}
       />
     </>
   );

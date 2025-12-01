@@ -1,12 +1,12 @@
 export type WorkspaceTask = {
   id: string;
   project_id: number;
-  subproject_id?: number | null;
   title: string;
   description?: string | null;
   status: 'backlog' | 'todo' | 'in_progress' | 'blocked' | 'done';
   progress_current: number;
   progress_target: number;
+  priority?: 'low' | 'medium' | 'high' | 'critical';
   assignees?: { id: string; name: string; avatar_url?: string | null; role?: string | null }[];
   assigneeIds: string[];
   due_date?: string | null;
@@ -15,7 +15,6 @@ export type WorkspaceTask = {
   has_children?: boolean;
   sprint_id?: number | null;
   parent_task_id?: string | null;
-  priority?: 'low' | 'medium' | 'high' | 'critical';
   visible_to_role?: 'all' | 'workers_and_above' | 'managers_and_above' | 'owners_only';
   visible_to_user_ids?: string[] | null;
 };

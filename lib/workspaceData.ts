@@ -10,20 +10,15 @@ const defaultColumnLabels = {
   done: 'Done'
 } as const;
 
-export async function fetchWorkspaceTasks(
-  projectId: number,
-  client?: any,
-  subprojectId?: number | null
-): Promise<WorkspaceTask[]> {
+export async function fetchWorkspaceTasks(projectId: number, client?: any): Promise<WorkspaceTask[]> {
   const supabase = client ?? createServerComponentClient({ cookies });
 
   const baseSelect =
-    'id, project_id, subproject_id, sprint_id, parent_task_id, title, description, status, priority, progress_current, progress_target, visible_to_role, visible_to_user_ids, due_date';
+    'id, project_id, sprint_id, parent_task_id, title, description, status, priority, progress_current, progress_target, visible_to_role, visible_to_user_ids, due_date';
 
   const enrichedSelect = `${baseSelect}, task_assignees(user_id, users(id, full_name, avatar_url, role)), task_dependencies(depends_on_task_id), task_comments(id)`;
 
   let baseQuery = supabase.from('tasks').select(enrichedSelect).eq('project_id', projectId);
-  if (subprojectId !== undefined && subprojectId !== null) baseQuery = baseQuery.eq('subproject_id', subprojectId);
 
   const primary = await baseQuery.order('id', { ascending: true });
 
@@ -31,9 +26,7 @@ export async function fetchWorkspaceTasks(
 
   if (primary.error) {
     console.error('[workspace tasks] enriched fetch failed, falling back to base select', { projectId, error: primary.error });
-    let fallbackQuery = supabase.from('tasks').select(baseSelect).eq('project_id', projectId);
-    if (subprojectId !== undefined && subprojectId !== null)
-      fallbackQuery = fallbackQuery.eq('subproject_id', subprojectId);
+    const fallbackQuery = supabase.from('tasks').select(baseSelect).eq('project_id', projectId);
     const fallback = await fallbackQuery.order('id', { ascending: true });
 
     if (fallback.error) {
@@ -110,12 +103,6 @@ export async function fetchWorkspaceTasks(
     return {
       id: String(task.id),
       project_id: typeof task.project_id === 'number' ? task.project_id : Number(task.project_id),
-      subproject_id:
-        task.subproject_id === undefined || task.subproject_id === null
-          ? null
-          : typeof task.subproject_id === 'number'
-            ? task.subproject_id
-            : Number(task.subproject_id),
       title: task.title,
       description: task.description,
       status: task.status,

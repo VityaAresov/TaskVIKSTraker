@@ -19,7 +19,6 @@ export type TaskModalProps = {
   initialTask?: Task & { assigneeIds?: string[] };
   onClose: () => void;
   onSaved: (task: Task & { assigneeIds?: string[]; comments_count?: number }) => void;
-  subprojectId?: number;
 };
 
 type Comment = { id: string; body: string; author_id: string; created_at: string; users?: { full_name: string } };
@@ -34,8 +33,7 @@ export function TaskModal({
   currentUserId,
   initialTask,
   onClose,
-  onSaved,
-  subprojectId
+  onSaved
 }: TaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -106,7 +104,6 @@ export function TaskModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           project_id: projectId,
-          subproject_id: subprojectId ?? null,
           title,
           description,
           status,
@@ -128,7 +125,6 @@ export function TaskModal({
       onSaved({
         id: String(json.task.id),
         project_id: projectId,
-        subproject_id: subprojectId ?? null,
         title,
         description,
         status,

@@ -47,16 +47,8 @@ export default async function ResourcesPage({
     return <div className="text-sm text-muted">Project not found.</div>;
   }
 
-  const rawSubprojectId = searchParams?.subprojectId ?? searchParams?.subproject_id;
-  const parsedSubprojectId = Array.isArray(rawSubprojectId)
-    ? Number(rawSubprojectId[0])
-    : rawSubprojectId
-      ? Number(rawSubprojectId)
-      : null;
-  const activeSubprojectId = Number.isFinite(parsedSubprojectId) ? Number(parsedSubprojectId) : null;
-
   const [tasks, usersResp] = await Promise.all([
-    fetchWorkspaceTasks(projectId, supabase, activeSubprojectId) as Promise<WorkspaceTask[]>,
+    fetchWorkspaceTasks(projectId, supabase) as Promise<WorkspaceTask[]>,
     supabase.from('users').select('id, full_name, role, avatar_url')
   ]);
   const users = usersResp.data ?? [];
