@@ -30,7 +30,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     updates.description = payload.description ?? existing.description;
     updates.title = payload.title ?? existing.title;
     updates.due_date = payload.due_date ?? existing.due_date;
+    updates.start_date = payload.start_date ?? existing.start_date;
     updates.priority = payload.priority ?? existing.priority;
+    updates.sprint_id = payload.sprint_id ?? existing.sprint_id;
   }
 
   if (Object.keys(updates).length === 0) {

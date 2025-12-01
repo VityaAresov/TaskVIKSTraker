@@ -1,6 +1,9 @@
 import { cookies } from 'next/headers';
 import { redirect, notFound } from 'next/navigation';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { fetchWorkspaceTasks } from '../../../../lib/workspaceData';
+import type { WorkspaceTask } from '../../../../lib/workspaceTypes';
+import { ProjectResources } from '../../../../components/tasks/ProjectResources';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,14 +23,24 @@ export default async function ResourcesPage({
     redirect('/login');
   }
 
-  const activeProjectId = searchParams.subprojectId ?? params.projectId;
-  const { data: project } = await supabase.from('projects').select('name').eq('id', activeProjectId).single();
+  const projectId = Number(params.projectId);
+  const { data: project } = await supabase.from('projects').select('id, name').eq('id', projectId).single();
   if (!project) return notFound();
 
+  const parsedSub = searchParams.subprojectId ? Number(searchParams.subprojectId) : NaN;
+  const activeProjectId = Number.isNaN(parsedSub) ? projectId : parsedSub;
+
+  const [tasks, usersResp] = await Promise.all([
+    fetchWorkspaceTasks(activeProjectId, supabase) as Promise<WorkspaceTask[]>,
+    supabase.from('users').select('id, full_name, role, avatar_url')
+  ]);
+  const users = usersResp.data ?? [];
+  const role = users.find((u) => u.id === session.user.id)?.role ?? 'worker';
+
   return (
-    <div className="rounded-lg border border-border bg-panel p-6 shadow-sm">
-      <div className="text-lg font-semibold">Resources for {project?.name ?? 'project'}</div>
-      <p className="text-sm text-muted mt-2">Resource view will be built out here.</p>
+    <div className="space-y-4">
+      <div className="text-lg font-semibold">Resources for {project.name}</div>
+      <ProjectResources tasks={tasks} users={users} role={role} currentUserId={session.user.id} />
     </div>
   );
 }

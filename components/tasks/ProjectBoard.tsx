@@ -7,6 +7,7 @@ import { Select } from '../ui/Select';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { TaskModal } from './TaskModal';
+import type { WorkspaceTask } from '../../lib/workspaceTypes';
 
 export function ProjectBoard({
   tasks,
@@ -15,7 +16,7 @@ export function ProjectBoard({
   users,
   workspaceId
 }: {
-  tasks: (Task & { assigneeIds?: string[] })[];
+  tasks: WorkspaceTask[];
   role: string;
   currentUserId: string;
   users?: { id: string; full_name: string; role: string; avatar_url?: string | null }[];

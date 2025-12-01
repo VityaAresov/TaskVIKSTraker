@@ -8,11 +8,13 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const supabase = createSupabaseServerClient();
   const { searchParams } = new URL(request.url);
-  const projectId = searchParams.get('project_id');
-  const sprintId = searchParams.get('sprint_id');
+  const projectIdParam = searchParams.get('project_id');
+  const sprintIdParam = searchParams.get('sprint_id');
+  const projectId = projectIdParam ? Number(projectIdParam) : null;
+  const sprintId = sprintIdParam ? Number(sprintIdParam) : null;
   let query = supabase.from('tasks').select('*, task_assignees(user_id), task_dependencies(depends_on_task_id)');
-  if (projectId) query = query.eq('project_id', Number(projectId));
-  if (sprintId) query = query.eq('sprint_id', Number(sprintId));
+  if (projectId !== null && !Number.isNaN(projectId)) query = query.eq('project_id', projectId);
+  if (sprintId !== null && !Number.isNaN(sprintId)) query = query.eq('sprint_id', sprintId);
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ tasks: data ?? [] });
@@ -24,10 +26,14 @@ export async function POST(request: Request) {
   if (!canManageProjects(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const payload = await request.json();
   const supabase = createSupabaseServerClient();
+  const projectId = Number(payload.project_id);
+  if (!payload.title || Number.isNaN(projectId)) {
+    return NextResponse.json({ error: 'Project and title are required' }, { status: 400 });
+  }
   const { data, error } = await supabase
     .from('tasks')
     .insert({
-      project_id: Number(payload.project_id),
+      project_id: projectId,
       sprint_id: payload.sprint_id ?? null,
       parent_task_id: payload.parent_task_id ?? null,
       title: payload.title,

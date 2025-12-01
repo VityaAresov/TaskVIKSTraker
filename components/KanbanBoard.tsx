@@ -5,27 +5,9 @@ import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { Progress } from './ui/Progress';
 import { Avatar } from './ui/Avatar';
+import type { WorkspaceTask } from '../lib/workspaceTypes';
 
-export type Task = {
-  id: string;
-  project_id?: number;
-  title: string;
-  description?: string | null;
-  status: 'backlog' | 'todo' | 'in_progress' | 'blocked' | 'done';
-  progress_current: number;
-  progress_target: number;
-  assignees?: { id: string; name: string; avatar_url?: string | null }[];
-  start_date?: string | null;
-  due_date?: string | null;
-  depends_on?: string[];
-  comments_count?: number;
-  has_children?: boolean;
-  sprint_id?: number | null;
-  parent_task_id?: string | null;
-  priority?: 'low' | 'medium' | 'high' | 'critical';
-  visible_to_role?: 'all' | 'workers_and_above' | 'managers_and_above' | 'owners_only';
-  visible_to_user_ids?: string[] | null;
-};
+export type Task = WorkspaceTask;
 
 const columns: { key: Task['status']; label: string }[] = [
   { key: 'backlog', label: 'Backlog' },

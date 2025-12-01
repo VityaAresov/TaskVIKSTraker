@@ -12,6 +12,7 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { TaskDetailDrawer } from './TaskDetailDrawer';
 import type { Task } from '../../lib/types';
+import type { WorkspaceTask } from '../../lib/workspaceTypes';
 
 type TaskWithRelations = Task & {
   task_assignees?: { user_id: string }[];
@@ -51,21 +52,25 @@ export function ProjectWorkspace({
     mine: false
   });
 
-  const enrichedTasks = useMemo(() => {
+  const enrichedTasks = useMemo<WorkspaceTask[]>(() => {
     return tasks.map((task) => {
       const assignees = (task.task_assignees ?? [])
         .map((a) => users.find((u) => u.id === a.user_id))
         .filter(Boolean)
         .map((user) => ({ id: user!.id, name: user!.full_name, avatar_url: user!.avatar_url }));
+      const assigneeIds = assignees.map((a) => a.id);
       return {
         ...task,
         assignees,
+        assigneeIds,
+        comments_count: (task as any).comments_count ?? 0,
+        has_children: false,
         depends_on: (task.task_dependencies ?? []).map((d) => d.depends_on_task_id)
       };
-    });
+    }) as WorkspaceTask[];
   }, [tasks, users]);
 
-  const filteredTasks = useMemo(() => {
+  const filteredTasks = useMemo<WorkspaceTask[]>(() => {
     const sprintFilter = filters.sprint !== 'all' ? Number(filters.sprint) : null;
     return enrichedTasks.filter((task) => {
       if (sprintFilter !== null && task.sprint_id !== sprintFilter) return false;
@@ -173,7 +178,7 @@ export function ProjectWorkspace({
                   start_date: t.start_date,
                   due_date: t.due_date,
                   status: t.status,
-                  depends_on: (t.task_dependencies ?? []).map((d) => d.depends_on_task_id)
+                  depends_on: t.depends_on ?? []
                 }))}
               />
             )
