@@ -1,11 +1,12 @@
 import { cookies } from 'next/headers';
-import { redirect, notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { fetchWorkspaceTasks } from '../../../../lib/workspaceData';
 import type { WorkspaceTask } from '../../../../lib/workspaceTypes';
 import { ProjectTimeline } from '../../../../components/tasks/ProjectTimeline';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function TimelinePage({
   params,
@@ -16,16 +17,35 @@ export default async function TimelinePage({
 }) {
   const supabase = createServerComponentClient({ cookies });
   const {
-    data: { session }
+    data: { session },
+    error: sessionError
   } = await supabase.auth.getSession();
+
+  if (sessionError) {
+    console.error('Failed to read session in timeline', sessionError);
+  }
 
   if (!session) {
     redirect('/login');
   }
 
   const projectId = Number(params.projectId);
-  const { data: project } = await supabase.from('projects').select('id, name').eq('id', projectId).single();
-  if (!project) return notFound();
+  const { data: project, error: projectError } = await supabase
+    .from('projects')
+    .select('id, name')
+    .eq('id', projectId)
+    .single();
+
+  if (projectError) {
+    console.error('Failed to load project for timeline', projectError);
+    return (
+      <div className="text-sm text-muted">Unable to load this project.</div>
+    );
+  }
+
+  if (!project) {
+    return <div className="text-sm text-muted">Project not found.</div>;
+  }
 
   const parsedSub = searchParams.subprojectId ? Number(searchParams.subprojectId) : NaN;
   const activeProjectId = Number.isNaN(parsedSub) ? projectId : parsedSub;

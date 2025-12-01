@@ -13,6 +13,9 @@ export const metadata = {
   description: 'Minimalistic task-tracking app with Supabase'
 };
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const supabase = createServerComponentClient({ cookies });
   const {

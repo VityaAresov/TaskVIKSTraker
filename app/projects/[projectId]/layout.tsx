@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { cookies } from 'next/headers';
-import { redirect, notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import type { ReactNode } from 'react';
 import { ProjectTabs } from '../../../components/tasks/ProjectTabs';
 import { SubprojectSwitcher } from '../../../components/tasks/SubprojectSwitcher';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function ProjectLayout({
   children,
@@ -17,8 +18,13 @@ export default async function ProjectLayout({
 }) {
   const supabase = createServerComponentClient({ cookies });
   const {
-    data: { session }
+    data: { session },
+    error: sessionError
   } = await supabase.auth.getSession();
+
+  if (sessionError) {
+    console.error('Failed to read session in project layout', sessionError);
+  }
 
   if (!session) {
     redirect('/login');
@@ -26,14 +32,22 @@ export default async function ProjectLayout({
 
   const projectId = Number(params.projectId);
 
-  const [{ data: project }, { data: subprojects }, { data: user }] = await Promise.all([
+  const [{ data: project, error: projectError }, { data: subprojects }, { data: user }] = await Promise.all([
     supabase.from('projects').select('*').eq('id', projectId).single(),
     supabase.from('projects').select('*').eq('parent_project_id', projectId),
     supabase.from('users').select('role').eq('id', session.user.id).single()
   ]);
 
+  if (projectError) {
+    console.error('Failed to load project in layout', projectError);
+  }
+
   if (!project) {
-    notFound();
+    return (
+      <div className="container-page space-y-6">
+        <div className="text-sm text-muted">This project could not be found.</div>
+      </div>
+    );
   }
 
   return (
