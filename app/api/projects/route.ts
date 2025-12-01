@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       name: payload.name,
       description: payload.description,
       owner_id: user.id,
-      parent_project_id: payload.parent_project_id ?? null
+      parent_project_id: payload.parent_project_id ? Number(payload.parent_project_id) : null
     })
     .select()
     .single();

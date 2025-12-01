@@ -7,14 +7,14 @@ import { Select } from '../ui/Select';
 import { Input } from '../ui/Input';
 import { Card } from '../ui/Card';
 
-export type Subproject = { id: string; name: string; parent_project_id?: string | null };
+export type Subproject = { id: number; name: string; parent_project_id: number | null };
 
 export function SubprojectSwitcher({
   projectId,
   subprojects,
   role
 }: {
-  projectId: string;
+  projectId: number;
   subprojects: Subproject[];
   role: string;
 }) {
@@ -26,14 +26,15 @@ export function SubprojectSwitcher({
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const selected = searchParams.get('subprojectId') ?? projectId;
+  const selectedParam = searchParams.get('subprojectId');
+  const selected = selectedParam ? Number(selectedParam) : projectId;
 
-  const handleSelect = (id: string) => {
+  const handleSelect = (id: number) => {
     const params = new URLSearchParams(searchParams.toString());
     if (id === projectId) {
       params.delete('subprojectId');
     } else {
-      params.set('subprojectId', id);
+      params.set('subprojectId', String(id));
     }
     router.push(`${pathname}?${params.toString()}`);
   };
@@ -62,7 +63,7 @@ export function SubprojectSwitcher({
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted">Workspace:</span>
-        <Select value={selected} onChange={(e) => handleSelect(e.target.value)} className="w-60">
+        <Select value={String(selected)} onChange={(e) => handleSelect(Number(e.target.value))} className="w-60">
           <option value={projectId}>Main project</option>
           {subprojects.map((sp) => (
             <option key={sp.id} value={sp.id}>

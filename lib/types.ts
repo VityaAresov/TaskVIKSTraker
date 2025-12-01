@@ -9,17 +9,17 @@ export type UserProfile = {
 };
 
 export type Project = {
-  id: string;
+  id: number;
   name: string;
   description?: string;
   owner_id: string;
-  parent_project_id?: string | null;
+  parent_project_id: number | null;
   created_at?: string;
 };
 
 export type Sprint = {
-  id: string;
-  project_id: string;
+  id: number;
+  project_id: number;
   name: string;
   description?: string;
   start_date?: string | null;
@@ -29,8 +29,8 @@ export type Sprint = {
 
 export type Task = {
   id: string;
-  project_id: string;
-  sprint_id: string | null;
+  project_id: number;
+  sprint_id: number | null;
   parent_task_id: string | null;
   title: string;
   description?: string | null;

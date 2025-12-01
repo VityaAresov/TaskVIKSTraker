@@ -66,8 +66,9 @@ export function ProjectWorkspace({
   }, [tasks, users]);
 
   const filteredTasks = useMemo(() => {
+    const sprintFilter = filters.sprint !== 'all' ? Number(filters.sprint) : null;
     return enrichedTasks.filter((task) => {
-      if (filters.sprint !== 'all' && task.sprint_id !== filters.sprint) return false;
+      if (sprintFilter !== null && task.sprint_id !== sprintFilter) return false;
       if (filters.status !== 'all' && task.status !== filters.status) return false;
       if (filters.assignee !== 'all') {
         const hasAssignee = (task.assignees ?? []).some((a) => a?.id === filters.assignee);

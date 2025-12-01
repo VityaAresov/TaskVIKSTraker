@@ -4,12 +4,11 @@ import { useState } from 'react';
 import { Card } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { Progress } from './ui/Progress';
-import { Button } from './ui/Button';
 import { Avatar } from './ui/Avatar';
 
 export type Task = {
   id: string;
-  project_id?: string;
+  project_id?: number;
   title: string;
   description?: string | null;
   status: 'backlog' | 'todo' | 'in_progress' | 'blocked' | 'done';
@@ -21,7 +20,7 @@ export type Task = {
   depends_on?: string[];
   comments_count?: number;
   has_children?: boolean;
-  sprint_id?: string | null;
+  sprint_id?: number | null;
   parent_task_id?: string | null;
   priority?: 'low' | 'medium' | 'high' | 'critical';
   visible_to_role?: 'all' | 'workers_and_above' | 'managers_and_above' | 'owners_only';
@@ -112,15 +111,6 @@ export function KanbanBoard({
                     <Progress value={(task.progress_current / Math.max(task.progress_target, 1)) * 100} />
                   </div>
                 </div>
-                {onStatusChange && (
-                  <div className="mt-2 flex gap-2 flex-wrap">
-                    {columns.map((c) => (
-                      <Button key={c.key} className="text-xs px-2 py-1" onClick={() => onStatusChange(task.id, c.key)}>
-                        {c.label}
-                      </Button>
-                    ))}
-                  </div>
-                )}
               </Card>
             ))}
           </div>

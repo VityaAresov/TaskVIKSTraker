@@ -11,8 +11,8 @@ export async function GET(request: Request) {
   const projectId = searchParams.get('project_id');
   const sprintId = searchParams.get('sprint_id');
   let query = supabase.from('tasks').select('*, task_assignees(user_id), task_dependencies(depends_on_task_id)');
-  if (projectId) query = query.eq('project_id', projectId);
-  if (sprintId) query = query.eq('sprint_id', sprintId);
+  if (projectId) query = query.eq('project_id', Number(projectId));
+  if (sprintId) query = query.eq('sprint_id', Number(sprintId));
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ tasks: data ?? [] });
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from('tasks')
     .insert({
-      project_id: payload.project_id,
+      project_id: Number(payload.project_id),
       sprint_id: payload.sprint_id ?? null,
       parent_task_id: payload.parent_task_id ?? null,
       title: payload.title,

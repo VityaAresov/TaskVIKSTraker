@@ -22,10 +22,11 @@ export default async function ProjectBoardPage({
     redirect('/login');
   }
 
-  const { data: project } = await supabase.from('projects').select('id').eq('id', params.projectId).single();
+  const projectId = Number(params.projectId);
+  const { data: project } = await supabase.from('projects').select('id').eq('id', projectId).single();
   if (!project) return notFound();
 
-  const activeProjectId = searchParams.subprojectId ?? params.projectId;
+  const activeProjectId = searchParams.subprojectId ? Number(searchParams.subprojectId) : projectId;
 
   const { data: tasks } = await supabase
     .from('tasks')
@@ -74,5 +75,13 @@ export default async function ProjectBoardPage({
 
   const role = users?.find((u) => u.id === session.user.id)?.role ?? 'worker';
 
-  return <ProjectBoard tasks={boardTasks} role={role} currentUserId={session.user.id} users={users ?? []} />;
+  return (
+    <ProjectBoard
+      tasks={boardTasks}
+      role={role}
+      currentUserId={session.user.id}
+      users={users ?? []}
+      workspaceId={activeProjectId}
+    />
+  );
 }

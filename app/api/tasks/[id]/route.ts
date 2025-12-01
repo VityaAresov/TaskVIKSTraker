@@ -13,27 +13,49 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   const { data: assignees } = await supabase.from('task_assignees').select('user_id').eq('task_id', params.id);
   const isAssignee = (assignees ?? []).some(({ user_id }: { user_id: string }) => user_id === user.id);
-  if (!canManageProjects(user.role) && !isAssignee && user.id !== existing.created_by) {
+  const canManage = canManageProjects(user.role);
+  if (!canManage && !isAssignee && user.id !== existing.created_by) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { data, error } = await supabase
-    .from('tasks')
-    .update({
-      status: payload.status ?? existing.status,
-      progress_current: payload.progress_current ?? existing.progress_current,
-      progress_target: payload.progress_target ?? existing.progress_target,
-      visible_to_role: payload.visible_to_role ?? existing.visible_to_role,
-      visible_to_user_ids: payload.visible_to_user_ids ?? existing.visible_to_user_ids,
-      description: payload.description ?? existing.description,
-      title: payload.title ?? existing.title,
-      due_date: payload.due_date ?? existing.due_date,
-      priority: payload.priority ?? existing.priority
-    })
-    .eq('id', params.id)
-    .select()
-    .single();
+  const updates: Record<string, any> = {};
+
+  if (payload.status && (canManage || isAssignee)) updates.status = payload.status;
+  if (payload.progress_current !== undefined && (canManage || isAssignee))
+    updates.progress_current = payload.progress_current;
+  if (payload.progress_target !== undefined && canManage) updates.progress_target = payload.progress_target;
+  if (canManage) {
+    updates.visible_to_role = payload.visible_to_role ?? existing.visible_to_role;
+    updates.visible_to_user_ids = payload.visible_to_user_ids ?? existing.visible_to_user_ids;
+    updates.description = payload.description ?? existing.description;
+    updates.title = payload.title ?? existing.title;
+    updates.due_date = payload.due_date ?? existing.due_date;
+    updates.priority = payload.priority ?? existing.priority;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+  }
+
+  const { data, error } = await supabase.from('tasks').update(updates).eq('id', params.id).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  if (canManage && Array.isArray(payload.assignees)) {
+    const desiredIds: string[] = payload.assignees;
+    const existingIds = (assignees ?? []).map((a: any) => a.user_id);
+    const toRemove = existingIds.filter((id) => !desiredIds.includes(id));
+    const toAdd = desiredIds.filter((id) => !existingIds.includes(id));
+
+    if (toRemove.length) {
+      await supabase.from('task_assignees').delete().eq('task_id', params.id).in('user_id', toRemove);
+    }
+    if (toAdd.length) {
+      await supabase
+        .from('task_assignees')
+        .insert(toAdd.map((user_id: string) => ({ task_id: params.id, user_id })));
+    }
+  }
+
   return NextResponse.json({ task: data });
 }
 

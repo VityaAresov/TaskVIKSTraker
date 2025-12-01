@@ -6,26 +6,29 @@ import { KanbanBoard, type Task } from '../KanbanBoard';
 import { Select } from '../ui/Select';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { TaskDetailDrawer } from './TaskDetailDrawer';
+import { TaskModal } from './TaskModal';
 
 export function ProjectBoard({
   tasks,
   role,
   currentUserId,
-  users
+  users,
+  workspaceId
 }: {
   tasks: (Task & { assigneeIds?: string[] })[];
   role: string;
   currentUserId: string;
   users?: { id: string; full_name: string; role: string; avatar_url?: string | null }[];
+  workspaceId: number;
 }) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState('all');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [items, setItems] = useState(tasks);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => {
     setItems(tasks);
@@ -105,21 +108,48 @@ export function ProjectBoard({
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <Button variant="ghost" onClick={() => router.refresh()}>
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={() => router.refresh()}>
+            Refresh
+          </Button>
+          {role !== 'worker' && (
+            <Button onClick={() => setShowCreate(true)} className="shadow-sm">
+              Create task
+            </Button>
+          )}
+        </div>
       </div>
       {error && <div className="text-sm text-red-600">{error}</div>}
-      <KanbanBoard tasks={filtered} onStatusChange={handleStatusChange} onSelect={(id) => setSelectedId(id)} />
-      {selectedId && (
-        <TaskDetailDrawer
-          open={Boolean(selectedId)}
-          onClose={() => setSelectedId(null)}
-          task={items.find((t) => t.id === selectedId)!}
-          allTasks={items}
-          users={users ?? assigneeOptions.map((a) => ({ id: a.id, full_name: a.name, role: 'worker' }))}
+      <KanbanBoard
+        tasks={filtered}
+        onStatusChange={handleStatusChange}
+        onSelect={(id) => setEditingTaskId(id)}
+      />
+
+      <TaskModal
+        open={showCreate}
+        mode="create"
+        workspaceId={workspaceId}
+        users={users ?? []}
+        role={role}
+        currentUserId={currentUserId}
+        onClose={() => setShowCreate(false)}
+        onSaved={(task) => setItems((prev) => [...prev, task])}
+      />
+
+      {editingTaskId && (
+        <TaskModal
+          open={Boolean(editingTaskId)}
+          mode="edit"
+          workspaceId={workspaceId}
+          users={users ?? []}
           role={role}
-          projectId={items.find((t) => t.id === selectedId)?.project_id ?? ''}
+          currentUserId={currentUserId}
+          initialTask={items.find((t) => t.id === editingTaskId)}
+          onClose={() => setEditingTaskId(null)}
+          onSaved={(task) =>
+            setItems((prev) => prev.map((t) => (t.id === task.id ? { ...t, ...task } : t)))
+          }
         />
       )}
     </div>
