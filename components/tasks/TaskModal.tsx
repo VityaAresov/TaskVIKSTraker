@@ -63,7 +63,7 @@ export function TaskModal({
       setDueDate(initialTask.due_date ?? '');
       setStartDate(initialTask.start_date ?? '');
       setProgressCurrent(initialTask.progress_current ?? 0);
-      setProgressTarget((initialTask as any).progress_total ?? initialTask.progress_target ?? 100);
+      setProgressTarget(initialTask.progress_target ?? 100);
     } else {
       setTitle('');
       setDescription('');
@@ -115,7 +115,6 @@ export function TaskModal({
           status,
           progress_current: progressCurrent,
           progress_target: progressTarget,
-          progress_total: progressTarget,
           due_date: dueDate || null,
           start_date: startDate || null,
           assignees: assigneeIds
@@ -139,7 +138,6 @@ export function TaskModal({
         status,
         progress_current: progressCurrent,
         progress_target: progressTarget,
-        progress_total: progressTarget,
         assignees,
         due_date: dueDate || null,
         start_date: startDate || null,
@@ -161,7 +159,6 @@ export function TaskModal({
     status,
     progress_current: progressCurrent,
     progress_target: progressTarget,
-    progress_total: progressTarget,
     due_date: dueDate || null,
     start_date: startDate || null,
     title,
@@ -195,7 +192,7 @@ export function TaskModal({
       assignees,
       assigneeIds: assigneeIds.length ? assigneeIds : initialTask.assigneeIds,
       start_date: startDate || null,
-      progress_total: json.task?.progress_total ?? progressTarget,
+      progress_target: json.task?.progress_target ?? progressTarget,
       comments_count: comments.length,
       subproject_id: json.task?.subproject_id ?? initialTask.subproject_id ?? null
     });

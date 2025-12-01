@@ -12,13 +12,12 @@ export type TaskDetailModel = {
   status: string;
   progress_current: number;
   progress_target: number;
-  progress_total?: number;
   assignees: { id: string; name: string }[];
   comments: { id: string; author: string; body: string; created_at: string }[];
 };
 
 export function TaskDetail({ task }: { task: TaskDetailModel }) {
-  const target = task.progress_total ?? task.progress_target;
+  const target = task.progress_target;
   return (
     <Card className="flex flex-col gap-4">
       <div>

@@ -42,7 +42,7 @@ export function TaskDetailDrawer({
   const [loading, setLoading] = useState(false);
   const [visibleToRole, setVisibleToRole] = useState(task.visible_to_role ?? 'all');
   const [visibleUserIds, setVisibleUserIds] = useState<string[]>(task.visible_to_user_ids ?? []);
-  const target = task.progress_total ?? task.progress_target ?? 1;
+  const target = task.progress_target ?? 1;
 
   const subtasks = useMemo(() => allTasks.filter((t) => t.parent_task_id === task.id), [allTasks, task.id]);
   const subtasksProgress = useMemo(() => {
@@ -50,7 +50,7 @@ export function TaskDetailDrawer({
     const avg =
       subtasks.reduce(
         (acc, st) =>
-          acc + (st.progress_current / Math.max((st as any).progress_total ?? st.progress_target ?? 1, 1)) * 100,
+          acc + (st.progress_current / Math.max(st.progress_target ?? 1, 1)) * 100,
         0
       ) / subtasks.length;
     return Math.round(avg);

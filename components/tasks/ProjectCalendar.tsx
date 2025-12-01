@@ -161,7 +161,7 @@ export function ProjectCalendar({
               </div>
               <div className="flex flex-col gap-1">
                 {dayTasks.map((task) => {
-                  const target = task.progress_total ?? task.progress_target ?? 1;
+                  const target = task.progress_target ?? 1;
                   return (
                   <button
                     key={task.id}

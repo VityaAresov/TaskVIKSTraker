@@ -106,7 +106,7 @@ export function ProjectTimeline({
 
       <div className="space-y-3">
         {datedOnly.map(({ task, start, end }) => {
-          const target = task.progress_total ?? task.progress_target ?? 1;
+          const target = task.progress_target ?? 1;
           const offset = start && minDate ? ((start.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24)) * (100 / totalDays) : 0;
           const width = start && end && minDate ? (Math.max(1, (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) * (100 / totalDays)) : 6;
           return (

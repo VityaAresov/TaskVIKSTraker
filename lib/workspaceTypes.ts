@@ -6,7 +6,6 @@ export type WorkspaceTask = {
   status: 'backlog' | 'todo' | 'in_progress' | 'blocked' | 'done';
   progress_current: number;
   progress_target: number;
-  progress_total?: number;
   assignees?: { id: string; name: string; avatar_url?: string | null; role?: string | null }[];
   assigneeIds: string[];
   start_date?: string | null;

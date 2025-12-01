@@ -24,7 +24,6 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (payload.progress_current !== undefined && (canManage || isAssignee))
     updates.progress_current = payload.progress_current;
   if (payload.progress_target !== undefined && canManage) updates.progress_target = payload.progress_target;
-  if (payload.progress_total !== undefined && (canManage || isAssignee)) updates.progress_total = payload.progress_total;
   if (canManage) {
     updates.visible_to_role = payload.visible_to_role ?? existing.visible_to_role;
     updates.visible_to_user_ids = payload.visible_to_user_ids ?? existing.visible_to_user_ids;

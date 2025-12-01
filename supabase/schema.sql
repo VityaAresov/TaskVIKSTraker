@@ -157,5 +157,3 @@ create table if not exists project_columns (
 ALTER TABLE public.tasks
 ADD COLUMN IF NOT EXISTS subproject_id bigint references public.projects(id) on delete cascade;
 
-ALTER TABLE public.tasks
-ADD COLUMN IF NOT EXISTS progress_total integer default 100;

@@ -131,7 +131,7 @@ export function KanbanBoard({
                   </div>
                   <div className="min-w-[80px]">
                     <Progress
-                      value={(task.progress_current / Math.max(task.progress_total ?? task.progress_target ?? 1, 1)) * 100}
+                  value={(task.progress_current / Math.max(task.progress_target ?? 1, 1)) * 100}
                     />
                   </div>
                 </div>
