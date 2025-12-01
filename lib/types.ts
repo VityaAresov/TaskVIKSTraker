@@ -30,6 +30,7 @@ export type Sprint = {
 export type Task = {
   id: string;
   project_id: number;
+  subproject_id?: number | null;
   sprint_id: number | null;
   parent_task_id: string | null;
   title: string;
@@ -37,6 +38,7 @@ export type Task = {
   status: 'backlog' | 'todo' | 'in_progress' | 'blocked' | 'done';
   progress_current: number;
   progress_target: number;
+  progress_total?: number;
   priority: 'low' | 'medium' | 'high' | 'critical';
   visible_to_role: 'all' | 'workers_and_above' | 'managers_and_above' | 'owners_only';
   visible_to_user_ids: string[] | null;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { Card } from '../ui/Card';
 import { Select } from '../ui/Select';
@@ -29,18 +29,24 @@ export function ProjectTimeline({
   users,
   role,
   currentUserId,
-  workspaceId
+  workspaceId,
+  projectId
 }: {
   tasks: WorkspaceTask[];
   users: { id: string; full_name: string; role: string; avatar_url?: string | null }[];
   role: string;
   currentUserId: string;
   workspaceId: number;
+  projectId: number;
 }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [items, setItems] = useState<WorkspaceTask[]>(tasks);
+
+  useEffect(() => {
+    setItems(tasks);
+  }, [tasks]);
 
   const filtered = useMemo(() => {
     return items.filter((task) => {
@@ -100,6 +106,7 @@ export function ProjectTimeline({
 
       <div className="space-y-3">
         {datedOnly.map(({ task, start, end }) => {
+          const target = task.progress_total ?? task.progress_target ?? 1;
           const offset = start && minDate ? ((start.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24)) * (100 / totalDays) : 0;
           const width = start && end && minDate ? (Math.max(1, (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) * (100 / totalDays)) : 6;
           return (
@@ -130,10 +137,10 @@ export function ProjectTimeline({
               </div>
               <div className="flex items-center justify-between text-xs text-muted">
                 <span>
-                  Progress {task.progress_current}/{Math.max(task.progress_target, 1)}
+                  Progress {task.progress_current}/{Math.max(target, 1)}
                 </span>
                 <div className="w-32">
-                  <Progress value={(task.progress_current / Math.max(task.progress_target, 1)) * 100} />
+                  <Progress value={(task.progress_current / Math.max(target, 1)) * 100} />
                 </div>
               </div>
             </Card>
@@ -164,6 +171,8 @@ export function ProjectTimeline({
           open={!!selectedTaskId}
           mode={selectedTaskId === 'new' ? 'create' : 'edit'}
           workspaceId={workspaceId}
+          projectId={projectId}
+          subprojectId={workspaceId !== projectId ? workspaceId : null}
           users={users}
           role={role}
           currentUserId={currentUserId}

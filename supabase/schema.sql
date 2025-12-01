@@ -142,3 +142,20 @@ ALTER TABLE public.projects
 ADD COLUMN IF NOT EXISTS column_blocked_label text DEFAULT 'Blocked';
 ALTER TABLE public.projects
 ADD COLUMN IF NOT EXISTS column_done_label text DEFAULT 'Done';
+
+-- Per-project column labels table
+create table if not exists project_columns (
+  id bigserial primary key,
+  project_id bigint not null references public.projects(id) on delete cascade,
+  key text not null,
+  label text not null,
+  "order" int not null default 0,
+  unique (project_id, key)
+);
+
+-- Workspace-aware tasks
+ALTER TABLE public.tasks
+ADD COLUMN IF NOT EXISTS subproject_id bigint references public.projects(id) on delete cascade;
+
+ALTER TABLE public.tasks
+ADD COLUMN IF NOT EXISTS progress_total integer default 100;

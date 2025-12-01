@@ -16,7 +16,8 @@ export function ProjectBoard({
   users,
   workspaceId,
   columnLabels,
-  projectId
+  projectId,
+  subprojectId
 }: {
   tasks: WorkspaceTask[];
   role: string;
@@ -25,6 +26,7 @@ export function ProjectBoard({
   workspaceId: number;
   columnLabels: { backlog: string; todo: string; in_progress: string; blocked: string; done: string };
   projectId: number;
+  subprojectId?: number | null;
 }) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState('all');
@@ -111,7 +113,7 @@ export function ProjectBoard({
     const resp = await fetch(`/api/projects/${projectId}/columns`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ [key === 'in_progress' ? 'column_in_progress_label' : `column_${key}_label`]: next })
+      body: JSON.stringify({ key, label: next })
     });
     if (!resp.ok) {
       setLabels(columnLabels);
@@ -166,7 +168,7 @@ export function ProjectBoard({
         onStatusChange={handleStatusChange}
         onSelect={(id) => setEditingTaskId(id)}
         columnLabels={labels}
-        canEditColumns={role !== 'worker'}
+        canEditColumns={role === 'owner' || role === 'manager'}
         onEditColumn={(key) => startEditingLabel(key)}
         editingKey={editingLabelKey ?? undefined}
         labelDraft={labelDraft}
@@ -178,6 +180,8 @@ export function ProjectBoard({
         open={showCreate}
         mode="create"
         workspaceId={workspaceId}
+        projectId={projectId}
+        subprojectId={subprojectId}
         users={users ?? []}
         role={role}
         currentUserId={currentUserId}
@@ -190,6 +194,8 @@ export function ProjectBoard({
           open={Boolean(editingTaskId)}
           mode="edit"
           workspaceId={workspaceId}
+          projectId={projectId}
+          subprojectId={subprojectId}
           users={users ?? []}
           role={role}
           currentUserId={currentUserId}

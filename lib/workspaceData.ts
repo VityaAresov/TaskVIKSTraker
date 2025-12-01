@@ -2,25 +2,44 @@ import { cookies } from 'next/headers';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import type { WorkspaceTask } from './workspaceTypes';
 
+const defaultColumnLabels = {
+  backlog: 'Backlog',
+  todo: 'To Do',
+  in_progress: 'In Progress',
+  blocked: 'Blocked',
+  done: 'Done'
+} as const;
+
 export async function fetchWorkspaceTasks(
-  workspaceId: number,
-  client?: any
+  projectId: number,
+  client?: any,
+  subprojectId?: number | null
 ): Promise<WorkspaceTask[]> {
   const supabase = client ?? createServerComponentClient({ cookies });
-  const { data, error } = await supabase
+  const hasSubproject = subprojectId !== null && subprojectId !== undefined && !Number.isNaN(subprojectId);
+
+  let query = supabase
     .from('tasks')
     .select(
-      `id, project_id, sprint_id, parent_task_id, title, description, status, start_date, due_date,
-       progress_current, progress_target, priority, visible_to_role, visible_to_user_ids,
+      `id, project_id, subproject_id, sprint_id, parent_task_id, title, description, status, start_date, due_date,
+       progress_current, progress_target, progress_total, priority, visible_to_role, visible_to_user_ids,
        task_assignees(user_id, users(id, full_name, avatar_url, role)),
        task_dependencies(depends_on_task_id),
        task_comments(id)`
     )
-    .eq('project_id', workspaceId)
+    .eq('project_id', projectId)
     .order('id', { ascending: true });
 
+  if (hasSubproject) {
+    query = query.eq('subproject_id', subprojectId);
+  } else {
+    query = query.is('subproject_id', null);
+  }
+
+  const { data, error } = await query;
+
   if (error) {
-    console.error('Failed to load workspace tasks', error);
+    console.error('Failed to load workspace tasks', { projectId, subprojectId, error });
     return [];
   }
 
@@ -40,11 +59,13 @@ export async function fetchWorkspaceTasks(
     return {
       id: String(task.id),
       project_id: typeof task.project_id === 'number' ? task.project_id : Number(task.project_id),
+      subproject_id: task.subproject_id === null || task.subproject_id === undefined ? null : Number(task.subproject_id),
       title: task.title,
       description: task.description,
       status: task.status,
       progress_current: task.progress_current ?? 0,
-      progress_target: task.progress_target ?? 100,
+      progress_target: task.progress_target ?? task.progress_total ?? 100,
+      progress_total: task.progress_total ?? task.progress_target ?? 100,
       priority: task.priority,
       visible_to_role: task.visible_to_role,
       visible_to_user_ids: task.visible_to_user_ids,
@@ -54,9 +75,54 @@ export async function fetchWorkspaceTasks(
       due_date: task.due_date,
       assignees,
       assigneeIds: assignees.map((a: { id: string }) => a.id),
-      depends_on: (task.task_dependencies ?? []).map((d: { depends_on_task_id: string | number }) => String(d.depends_on_task_id)),
+      depends_on: (task.task_dependencies ?? []).map((d: { depends_on_task_id: string | number }) =>
+        String(d.depends_on_task_id)
+      ),
       comments_count: (task.task_comments ?? []).length,
       has_children: Boolean(childCount[task.id])
     } satisfies WorkspaceTask;
   });
+}
+
+export async function fetchProjectColumnLabels(
+  projectId: number,
+  client?: any,
+  projectRow?: Partial<{ [K in keyof typeof defaultColumnLabels as `column_${K}_label`]: string | null }>
+) {
+  const supabase = client ?? createServerComponentClient({ cookies });
+  const seedLabels = {
+    backlog: projectRow?.column_backlog_label ?? defaultColumnLabels.backlog,
+    todo: projectRow?.column_todo_label ?? defaultColumnLabels.todo,
+    in_progress: projectRow?.column_in_progress_label ?? defaultColumnLabels.in_progress,
+    blocked: projectRow?.column_blocked_label ?? defaultColumnLabels.blocked,
+    done: projectRow?.column_done_label ?? defaultColumnLabels.done
+  };
+
+  const { data, error } = await supabase
+    .from('project_columns')
+    .select('key,label')
+    .eq('project_id', projectId);
+
+  if (error) {
+    console.error('[project columns] failed to load labels', { projectId, error });
+    return seedLabels;
+  }
+
+  if (!data || data.length === 0) {
+    await supabase.from('project_columns').upsert(
+      Object.entries(seedLabels).map(([key, label], index) => ({
+        project_id: projectId,
+        key,
+        label,
+        order: index
+      }))
+    );
+    return seedLabels;
+  }
+
+  return (data as { key: string; label: string | null }[]).reduce<Record<keyof typeof seedLabels, string>>((acc, row) => {
+    const key = row.key as keyof typeof seedLabels;
+    if (key in acc && row.label) acc[key] = row.label;
+    return acc;
+  }, { ...seedLabels });
 }

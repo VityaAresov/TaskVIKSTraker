@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   addDays,
   eachDayOfInterval,
@@ -34,13 +34,15 @@ export function ProjectCalendar({
   users,
   role,
   currentUserId,
-  workspaceId
+  workspaceId,
+  projectId
 }: {
   tasks: WorkspaceTask[];
   users: { id: string; full_name: string; role: string; avatar_url?: string | null }[];
   role: string;
   currentUserId: string;
   workspaceId: number;
+  projectId: number;
 }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
@@ -55,6 +57,10 @@ export function ProjectCalendar({
       return true;
     });
   }, [assigneeFilter, items, statusFilter]);
+
+  useEffect(() => {
+    setItems(tasks);
+  }, [tasks]);
 
   const days = useMemo(() => {
     const start = startOfWeek(startOfMonth(monthCursor), { weekStartsOn: 1 });
@@ -79,6 +85,8 @@ export function ProjectCalendar({
       return { day, tasks: daily };
     });
   }, [days, filtered]);
+
+  const today = new Date();
 
   const undated = filtered.filter((task) => !task.due_date && !task.start_date);
 
@@ -145,14 +153,16 @@ export function ProjectCalendar({
               key={day.toISOString()}
               className={`min-h-[110px] rounded-md border border-border bg-panel p-2 text-xs ${
                 isSameMonth(day, monthCursor) ? '' : 'opacity-60'
-              }`}
+              } ${isSameDay(day, today) ? 'ring-2 ring-sky-400' : ''}`}
             >
               <div className="mb-2 flex items-center justify-between text-[11px] font-semibold">
                 <span>{format(day, 'd')}</span>
                 {dayTasks.length > 0 && <Badge label={`${dayTasks.length}`} />}
               </div>
               <div className="flex flex-col gap-1">
-                {dayTasks.map((task) => (
+                {dayTasks.map((task) => {
+                  const target = task.progress_total ?? task.progress_target ?? 1;
+                  return (
                   <button
                     key={task.id}
                     type="button"
@@ -163,9 +173,10 @@ export function ProjectCalendar({
                     <div className="text-[10px] text-muted">
                       {task.assignees?.map((a) => a.name).join(', ') || 'Unassigned'}
                     </div>
-                    <Progress value={(task.progress_current / Math.max(task.progress_target, 1)) * 100} />
+                    <Progress value={(task.progress_current / Math.max(target, 1)) * 100} />
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -202,6 +213,8 @@ export function ProjectCalendar({
           open={!!selectedTaskId}
           mode={selectedTaskId === 'new' ? 'create' : 'edit'}
           workspaceId={workspaceId}
+          projectId={projectId}
+          subprojectId={workspaceId !== projectId ? workspaceId : null}
           users={users}
           role={role}
           currentUserId={currentUserId}

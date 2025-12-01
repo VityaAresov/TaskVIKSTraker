@@ -42,12 +42,17 @@ export function TaskDetailDrawer({
   const [loading, setLoading] = useState(false);
   const [visibleToRole, setVisibleToRole] = useState(task.visible_to_role ?? 'all');
   const [visibleUserIds, setVisibleUserIds] = useState<string[]>(task.visible_to_user_ids ?? []);
+  const target = task.progress_total ?? task.progress_target ?? 1;
 
   const subtasks = useMemo(() => allTasks.filter((t) => t.parent_task_id === task.id), [allTasks, task.id]);
   const subtasksProgress = useMemo(() => {
     if (subtasks.length === 0) return null;
     const avg =
-      subtasks.reduce((acc, st) => acc + (st.progress_current / Math.max(st.progress_target, 1)) * 100, 0) / subtasks.length;
+      subtasks.reduce(
+        (acc, st) =>
+          acc + (st.progress_current / Math.max((st as any).progress_total ?? st.progress_target ?? 1, 1)) * 100,
+        0
+      ) / subtasks.length;
     return Math.round(avg);
   }, [subtasks]);
 
@@ -130,16 +135,16 @@ export function TaskDetailDrawer({
                 <option value="done">Done</option>
               </Select>
             </div>
-            <div className="space-y-2">
+              <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span>Progress</span>
-                <span className="text-xs text-muted">{progressCurrent} / {task.progress_target}</span>
+                <span className="text-xs text-muted">{progressCurrent} / {target}</span>
               </div>
-              <Progress value={(progressCurrent / Math.max(task.progress_target, 1)) * 100} />
+              <Progress value={(progressCurrent / Math.max(target, 1)) * 100} />
               <input
                 type="range"
                 min={0}
-                max={task.progress_target}
+                max={target}
                 value={progressCurrent}
                 onChange={(e) => setProgressCurrent(Number(e.target.value))}
                 className="w-full"

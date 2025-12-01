@@ -12,6 +12,8 @@ export type TaskModalProps = {
   open: boolean;
   mode: 'create' | 'edit';
   workspaceId: number;
+  projectId: number;
+  subprojectId?: number | null;
   users: { id: string; full_name: string; role: string; avatar_url?: string | null }[];
   role: string;
   currentUserId: string;
@@ -26,6 +28,8 @@ export function TaskModal({
   open,
   mode,
   workspaceId,
+  projectId,
+  subprojectId,
   users,
   role,
   currentUserId,
@@ -59,7 +63,7 @@ export function TaskModal({
       setDueDate(initialTask.due_date ?? '');
       setStartDate(initialTask.start_date ?? '');
       setProgressCurrent(initialTask.progress_current ?? 0);
-      setProgressTarget(initialTask.progress_target ?? 100);
+      setProgressTarget((initialTask as any).progress_total ?? initialTask.progress_target ?? 100);
     } else {
       setTitle('');
       setDescription('');
@@ -104,12 +108,14 @@ export function TaskModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          project_id: workspaceId,
+          project_id: projectId,
+          subproject_id: subprojectId ?? (workspaceId !== projectId ? workspaceId : null),
           title,
           description,
           status,
           progress_current: progressCurrent,
           progress_target: progressTarget,
+          progress_total: progressTarget,
           due_date: dueDate || null,
           start_date: startDate || null,
           assignees: assigneeIds
@@ -126,12 +132,14 @@ export function TaskModal({
         .map((u) => ({ id: u.id, name: u.full_name, avatar_url: u.avatar_url }));
       onSaved({
         id: String(json.task.id),
-        project_id: workspaceId,
+        project_id: projectId,
+        subproject_id: json.task?.subproject_id ?? subprojectId ?? null,
         title,
         description,
         status,
         progress_current: progressCurrent,
         progress_target: progressTarget,
+        progress_total: progressTarget,
         assignees,
         due_date: dueDate || null,
         start_date: startDate || null,
@@ -149,19 +157,21 @@ export function TaskModal({
 
     if (!initialTask) return;
 
-    const payload: Record<string, any> = {
-      status,
-      progress_current: progressCurrent,
-      progress_target: progressTarget,
-      due_date: dueDate || null,
-      start_date: startDate || null,
-      title,
-      description
-    };
+  const payload: Record<string, any> = {
+    status,
+    progress_current: progressCurrent,
+    progress_target: progressTarget,
+    progress_total: progressTarget,
+    due_date: dueDate || null,
+    start_date: startDate || null,
+    title,
+    description
+  };
 
-    if (canManage) {
-      payload.assignees = assigneeIds;
-    }
+  if (canManage) {
+    payload.assignees = assigneeIds;
+    payload.subproject_id = subprojectId ?? (workspaceId !== projectId ? workspaceId : null);
+  }
 
     const res = await fetch(`/api/tasks/${initialTask.id}`, {
       method: 'PATCH',
@@ -185,7 +195,9 @@ export function TaskModal({
       assignees,
       assigneeIds: assigneeIds.length ? assigneeIds : initialTask.assigneeIds,
       start_date: startDate || null,
-      comments_count: comments.length
+      progress_total: json.task?.progress_total ?? progressTarget,
+      comments_count: comments.length,
+      subproject_id: json.task?.subproject_id ?? initialTask.subproject_id ?? null
     });
     onClose();
   };

@@ -1,5 +1,5 @@
 import { ProjectBoard } from '../../../components/tasks/ProjectBoard';
-import { fetchWorkspaceTasks } from '../../../lib/workspaceData';
+import { fetchProjectColumnLabels, fetchWorkspaceTasks } from '../../../lib/workspaceData';
 import { getSupabaseServerClient } from '../../../lib/supabaseServer';
 import type { WorkspaceTask } from '../../../lib/workspaceTypes';
 
@@ -72,10 +72,13 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
 
   const parsedSub = searchParams.subprojectId ? Number(searchParams.subprojectId) : NaN;
   const baseProjectId = typeof project.id === 'number' ? project.id : Number(project.id);
-  const activeProjectId = Number.isNaN(parsedSub) ? baseProjectId : parsedSub;
+  const activeSubprojectId = Number.isNaN(parsedSub) ? null : parsedSub;
+  const activeWorkspaceId = activeSubprojectId ?? baseProjectId;
+
+  const columnLabels = await fetchProjectColumnLabels(baseProjectId, supabase, project as any);
 
   const [tasks, usersResp] = await Promise.all([
-    fetchWorkspaceTasks(activeProjectId, supabase) as Promise<WorkspaceTask[]>,
+    fetchWorkspaceTasks(baseProjectId, supabase, activeSubprojectId) as Promise<WorkspaceTask[]>,
     supabase.from('users').select('id, full_name, role, avatar_url')
   ]);
 
@@ -93,15 +96,10 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
       role={role}
       currentUserId={session.user.id}
       users={users}
-      workspaceId={activeProjectId}
-      columnLabels={{
-        backlog: project.column_backlog_label ?? 'Backlog',
-        todo: project.column_todo_label ?? 'To Do',
-        in_progress: project.column_in_progress_label ?? 'In Progress',
-        blocked: project.column_blocked_label ?? 'Blocked',
-        done: project.column_done_label ?? 'Done'
-      }}
+      workspaceId={activeWorkspaceId}
+      columnLabels={columnLabels}
       projectId={baseProjectId}
+      subprojectId={activeSubprojectId}
     />
   );
 }

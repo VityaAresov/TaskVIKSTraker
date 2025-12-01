@@ -10,28 +10,19 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   const payload = await request.json();
   const supabase = createSupabaseServerClient();
-  const updates: Record<string, string> = {};
+  const key = typeof payload.key === 'string' ? payload.key : '';
+  const label = typeof payload.label === 'string' ? payload.label.trim() : '';
+  const allowedKeys = ['backlog', 'todo', 'in_progress', 'blocked', 'done'];
 
-  const allowedKeys = new Set([
-    'column_backlog_label',
-    'column_todo_label',
-    'column_in_progress_label',
-    'column_blocked_label',
-    'column_done_label'
-  ]);
-
-  Object.entries(payload).forEach(([key, value]) => {
-    if (allowedKeys.has(key) && typeof value === 'string' && value.trim()) {
-      updates[key] = value.trim();
-    }
-  });
-
-  if (!Object.keys(updates).length) {
-    return NextResponse.json({ error: 'No updates provided' }, { status: 400 });
+  if (!allowedKeys.includes(key) || !label) {
+    return NextResponse.json({ error: 'Invalid column update' }, { status: 400 });
   }
 
-  const { data, error } = await supabase.from('projects').update(updates).eq('id', Number(params.id)).select().single();
+  const { error } = await supabase
+    .from('project_columns')
+    .upsert({ project_id: Number(params.id), key, label }, { onConflict: 'project_id,key' });
+
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  return NextResponse.json({ project: data });
+  return NextResponse.json({ key, label });
 }

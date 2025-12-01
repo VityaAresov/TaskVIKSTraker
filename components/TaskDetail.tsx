@@ -12,11 +12,13 @@ export type TaskDetailModel = {
   status: string;
   progress_current: number;
   progress_target: number;
+  progress_total?: number;
   assignees: { id: string; name: string }[];
   comments: { id: string; author: string; body: string; created_at: string }[];
 };
 
 export function TaskDetail({ task }: { task: TaskDetailModel }) {
+  const target = task.progress_total ?? task.progress_target;
   return (
     <Card className="flex flex-col gap-4">
       <div>
@@ -37,10 +39,10 @@ export function TaskDetail({ task }: { task: TaskDetailModel }) {
         <div className="flex items-center justify-between text-sm">
           <span>Progress</span>
           <span>
-            {task.progress_current} / {task.progress_target}
+            {task.progress_current} / {target}
           </span>
         </div>
-        <Progress value={(task.progress_current / task.progress_target) * 100} />
+        <Progress value={(task.progress_current / Math.max(target, 1)) * 100} />
         <Input type="number" defaultValue={task.progress_current} />
       </div>
       <div className="space-y-2">

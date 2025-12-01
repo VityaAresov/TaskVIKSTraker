@@ -52,7 +52,7 @@ export function ProjectResources({
     const progressSum = userTasks.reduce(
       (acc, t) => ({
         current: acc.current + (t.progress_current ?? 0),
-        target: acc.target + (t.progress_target ?? 0)
+        target: acc.target + (t.progress_total ?? t.progress_target ?? 0)
       }),
       { current: 0, target: 0 }
     );

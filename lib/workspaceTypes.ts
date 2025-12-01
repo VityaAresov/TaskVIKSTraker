@@ -6,6 +6,7 @@ export type WorkspaceTask = {
   status: 'backlog' | 'todo' | 'in_progress' | 'blocked' | 'done';
   progress_current: number;
   progress_target: number;
+  progress_total?: number;
   assignees?: { id: string; name: string; avatar_url?: string | null; role?: string | null }[];
   assigneeIds: string[];
   start_date?: string | null;
@@ -15,6 +16,7 @@ export type WorkspaceTask = {
   has_children?: boolean;
   sprint_id?: number | null;
   parent_task_id?: string | null;
+  subproject_id?: number | null;
   priority?: 'low' | 'medium' | 'high' | 'critical';
   visible_to_role?: 'all' | 'workers_and_above' | 'managers_and_above' | 'owners_only';
   visible_to_user_ids?: string[] | null;

@@ -48,10 +48,11 @@ export default async function TimelinePage({
   }
 
   const parsedSub = searchParams.subprojectId ? Number(searchParams.subprojectId) : NaN;
-  const activeProjectId = Number.isNaN(parsedSub) ? projectId : parsedSub;
+  const activeSubprojectId = Number.isNaN(parsedSub) ? null : parsedSub;
+  const activeWorkspaceId = activeSubprojectId ?? projectId;
 
   const [tasks, usersResp] = await Promise.all([
-    fetchWorkspaceTasks(activeProjectId, supabase) as Promise<WorkspaceTask[]>,
+    fetchWorkspaceTasks(projectId, supabase, activeSubprojectId) as Promise<WorkspaceTask[]>,
     supabase.from('users').select('id, full_name, role, avatar_url')
   ]);
   const users = usersResp.data ?? [];
@@ -65,7 +66,8 @@ export default async function TimelinePage({
         users={users}
         role={role}
         currentUserId={session.user.id}
-        workspaceId={activeProjectId}
+        workspaceId={activeWorkspaceId}
+        projectId={projectId}
       />
     </div>
   );

@@ -10,10 +10,19 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const projectIdParam = searchParams.get('project_id');
   const sprintIdParam = searchParams.get('sprint_id');
+  const subprojectIdParam = searchParams.get('subproject_id');
   const projectId = projectIdParam ? Number(projectIdParam) : null;
   const sprintId = sprintIdParam ? Number(sprintIdParam) : null;
+  const subprojectId = subprojectIdParam ? Number(subprojectIdParam) : null;
   let query = supabase.from('tasks').select('*, task_assignees(user_id), task_dependencies(depends_on_task_id)');
   if (projectId !== null && !Number.isNaN(projectId)) query = query.eq('project_id', projectId);
+  if (subprojectIdParam !== null) {
+    if (subprojectId !== null && !Number.isNaN(subprojectId)) {
+      query = query.eq('subproject_id', subprojectId);
+    } else {
+      query = query.is('subproject_id', null);
+    }
+  }
   if (sprintId !== null && !Number.isNaN(sprintId)) query = query.eq('sprint_id', sprintId);
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
@@ -27,6 +36,10 @@ export async function POST(request: Request) {
   const payload = await request.json();
   const supabase = createSupabaseServerClient();
   const projectId = Number(payload.project_id);
+  const subprojectId =
+    payload.subproject_id === null || payload.subproject_id === undefined || Number.isNaN(Number(payload.subproject_id))
+      ? null
+      : Number(payload.subproject_id);
   if (!payload.title || Number.isNaN(projectId)) {
     return NextResponse.json({ error: 'Project and title are required' }, { status: 400 });
   }
@@ -34,13 +47,15 @@ export async function POST(request: Request) {
     .from('tasks')
     .insert({
       project_id: projectId,
+      subproject_id: subprojectId,
       sprint_id: payload.sprint_id ?? null,
       parent_task_id: payload.parent_task_id ?? null,
       title: payload.title,
       description: payload.description,
       status: payload.status ?? 'todo',
       progress_current: payload.progress_current ?? 0,
-      progress_target: payload.progress_target ?? 100,
+      progress_target: payload.progress_target ?? payload.progress_total ?? 100,
+      progress_total: payload.progress_total ?? payload.progress_target ?? 100,
       priority: payload.priority ?? 'medium',
       visible_to_role: payload.visible_to_role ?? 'all',
       visible_to_user_ids: payload.visible_to_user_ids ?? null,
