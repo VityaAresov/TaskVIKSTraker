@@ -9,6 +9,7 @@ import { Avatar } from './ui/Avatar';
 
 export type Task = {
   id: string;
+  project_id?: string;
   title: string;
   description?: string | null;
   status: 'backlog' | 'todo' | 'in_progress' | 'blocked' | 'done';
@@ -20,6 +21,11 @@ export type Task = {
   depends_on?: string[];
   comments_count?: number;
   has_children?: boolean;
+  sprint_id?: string | null;
+  parent_task_id?: string | null;
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  visible_to_role?: 'all' | 'workers_and_above' | 'managers_and_above' | 'owners_only';
+  visible_to_user_ids?: string[] | null;
 };
 
 const columns: { key: Task['status']; label: string }[] = [
@@ -87,9 +93,9 @@ export function KanbanBoard({
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted mt-2">
-                  {task.has_children && <span>Subtasks</span>}
-                  {task.depends_on && task.depends_on.length > 0 && <span>Depends on {task.depends_on.length}</span>}
-                  {typeof task.comments_count === 'number' && <span>{task.comments_count} comments</span>}
+                  {task.has_children && <Badge label="Subtasks" />}
+                  {task.depends_on && task.depends_on.length > 0 && <Badge label={`Depends ${task.depends_on.length}`} />}
+                  {typeof task.comments_count === 'number' && <Badge label={`${task.comments_count} comments`} />}
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <div className="flex -space-x-2">

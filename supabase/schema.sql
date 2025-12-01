@@ -23,6 +23,7 @@ create table if not exists projects (
   name text not null,
   description text,
   owner_id uuid references users(id),
+  parent_project_id uuid references projects(id) on delete cascade,
   created_at timestamp with time zone default now()
 );
 

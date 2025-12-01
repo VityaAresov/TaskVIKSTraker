@@ -19,7 +19,12 @@ export async function POST(request: Request) {
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from('projects')
-    .insert({ name: payload.name, description: payload.description, owner_id: user.id })
+    .insert({
+      name: payload.name,
+      description: payload.description,
+      owner_id: user.id,
+      parent_project_id: payload.parent_project_id ?? null
+    })
     .select()
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

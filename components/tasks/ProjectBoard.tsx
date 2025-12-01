@@ -1,26 +1,35 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { KanbanBoard, type Task } from '../KanbanBoard';
 import { Select } from '../ui/Select';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
+import { TaskDetailDrawer } from './TaskDetailDrawer';
 
 export function ProjectBoard({
   tasks,
   role,
-  currentUserId
+  currentUserId,
+  users
 }: {
   tasks: (Task & { assigneeIds?: string[] })[];
   role: string;
   currentUserId: string;
+  users?: { id: string; full_name: string; role: string; avatar_url?: string | null }[];
 }) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState('all');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [items, setItems] = useState(tasks);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setItems(tasks);
+  }, [tasks]);
 
   const assigneeOptions = useMemo(() => {
     const uniques = new Map<string, string>();
@@ -62,8 +71,10 @@ export function ProjectBoard({
       body: JSON.stringify({ status })
     });
     if (!resp.ok) {
-      // revert on error
       setItems((prev) => prev.map((t) => (t.id === id ? { ...t, status: task.status } : t)));
+      setError('Could not update task status. Please retry.');
+    } else {
+      setError(null);
     }
   };
 
@@ -98,7 +109,19 @@ export function ProjectBoard({
           Refresh
         </Button>
       </div>
-      <KanbanBoard tasks={filtered} onStatusChange={handleStatusChange} />
+      {error && <div className="text-sm text-red-600">{error}</div>}
+      <KanbanBoard tasks={filtered} onStatusChange={handleStatusChange} onSelect={(id) => setSelectedId(id)} />
+      {selectedId && (
+        <TaskDetailDrawer
+          open={Boolean(selectedId)}
+          onClose={() => setSelectedId(null)}
+          task={items.find((t) => t.id === selectedId)!}
+          allTasks={items}
+          users={users ?? assigneeOptions.map((a) => ({ id: a.id, full_name: a.name, role: 'worker' }))}
+          role={role}
+          projectId={items.find((t) => t.id === selectedId)?.project_id ?? ''}
+        />
+      )}
     </div>
   );
 }

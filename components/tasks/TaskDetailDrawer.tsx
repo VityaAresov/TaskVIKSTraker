@@ -7,7 +7,7 @@ import { Input } from '../ui/Input';
 import { Progress } from '../ui/Progress';
 import { Badge } from '../ui/Badge';
 import { Avatar } from '../ui/Avatar';
-import type { Task } from '../../lib/types';
+import type { Task } from '../KanbanBoard';
 
 type AssigneeLite = { id: string; name: string; avatar_url?: string | null };
 

@@ -13,6 +13,7 @@ export type Project = {
   name: string;
   description?: string;
   owner_id: string;
+  parent_project_id?: string | null;
   created_at?: string;
 };
 
