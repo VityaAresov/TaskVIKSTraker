@@ -41,9 +41,6 @@ export type Task = {
   visible_to_role: 'all' | 'workers_and_above' | 'managers_and_above' | 'owners_only';
   visible_to_user_ids: string[] | null;
   due_date?: string | null;
-  created_by?: string;
-  created_at?: string;
-  updated_at?: string;
 };
 
 export type TaskComment = {

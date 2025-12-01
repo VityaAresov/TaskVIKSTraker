@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const projectId = projectIdParam ? Number(projectIdParam) : null;
   const sprintId = sprintIdParam ? Number(sprintIdParam) : null;
   const selectColumns =
-    'id, project_id, sprint_id, parent_task_id, title, description, status, due_date, progress_current, progress_target, priority, visible_to_role, visible_to_user_ids, created_by, created_at, updated_at, task_assignees(user_id), task_dependencies(depends_on_task_id)';
+    'id, project_id, sprint_id, parent_task_id, title, description, status, due_date, progress_current, progress_target, priority, visible_to_role, visible_to_user_ids, task_assignees(user_id), task_dependencies(depends_on_task_id)';
 
   let query = supabase.from('tasks').select(selectColumns);
   if (projectId !== null && !Number.isNaN(projectId)) query = query.eq('project_id', projectId);
@@ -46,8 +46,7 @@ export async function POST(request: Request) {
     priority: payload.priority ?? 'medium',
     visible_to_role: payload.visible_to_role ?? 'all',
     visible_to_user_ids: payload.visible_to_user_ids ?? null,
-    due_date: payload.due_date,
-    created_by: user.id
+    due_date: payload.due_date
   };
 
   const { data, error } = await supabase.from('tasks').insert(insertPayload).select().single();
