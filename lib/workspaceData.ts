@@ -20,7 +20,7 @@ export async function fetchWorkspaceTasks(
 
   const baseSelect =
     `id, project_id, sprint_id, parent_task_id, title, description, status, start_date, due_date,
-     progress_current, progress_target, priority, visible_to_role, visible_to_user_ids,
+     progress_current, progress_target, progress_total, priority, visible_to_role, visible_to_user_ids,
      task_assignees(user_id, users(id, full_name, avatar_url, role)),
      task_dependencies(depends_on_task_id),
      task_comments(id)`;
@@ -44,9 +44,22 @@ export async function fetchWorkspaceTasks(
 
   let { data, error } = await runQuery(true);
 
-  if (error && error.message.includes("subproject_id")) {
+  if (error && error.message.includes('subproject_id')) {
     console.warn('[workspace tasks] subproject_id missing, retrying without subproject filter');
     const fallback = await runQuery(false);
+    ({ data, error } = await fallback);
+  }
+
+  if (error && error.message.toLowerCase().includes('column')) {
+    console.warn('[workspace tasks] column mismatch, falling back to select *', { error });
+    const fallback = supabase
+      .from('tasks')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('id', { ascending: true });
+    if (hasSubproject) {
+      fallback.eq('subproject_id', subprojectId as any);
+    }
     ({ data, error } = await fallback);
   }
 
@@ -76,7 +89,7 @@ export async function fetchWorkspaceTasks(
       description: task.description,
       status: task.status,
       progress_current: task.progress_current ?? 0,
-      progress_target: task.progress_target ?? 100,
+      progress_target: task.progress_target ?? task.progress_total ?? 100,
       priority: task.priority,
       visible_to_role: task.visible_to_role,
       visible_to_user_ids: task.visible_to_user_ids,
