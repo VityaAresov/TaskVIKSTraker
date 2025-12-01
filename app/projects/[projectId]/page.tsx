@@ -1,8 +1,7 @@
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { ProjectBoard } from '../../../components/tasks/ProjectBoard';
 import { fetchWorkspaceTasks } from '../../../lib/workspaceData';
+import { createSupabaseServerClient } from '../../../lib/supabaseServer';
 import type { WorkspaceTask } from '../../../lib/workspaceTypes';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +14,7 @@ export default async function ProjectBoardPage({
   params: { projectId: string };
   searchParams: Record<string, string | undefined>;
 }) {
-  const supabase = createServerComponentClient({ cookies });
+  const supabase = createSupabaseServerClient();
   const {
     data: { session },
     error: sessionError
@@ -31,12 +30,7 @@ export default async function ProjectBoardPage({
 
   const projectId = Number(params.projectId);
   if (Number.isNaN(projectId)) {
-    console.error('Invalid project id', params.projectId);
-    return (
-      <div className="text-sm text-muted">
-        Unable to load project: invalid project id.
-      </div>
-    );
+    throw new Error('Invalid project id');
   }
 
   const {
@@ -48,25 +42,26 @@ export default async function ProjectBoardPage({
       'id, column_backlog_label, column_todo_label, column_in_progress_label, column_blocked_label, column_done_label'
     )
     .eq('id', projectId)
-    .single();
+    .maybeSingle();
 
   if (projectError) {
-    console.error('Failed to load project', projectError);
+    console.error('[project page] Failed to load project', { projectId, error: projectError });
     return (
       <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-        We could not load this project right now. Please try again later.
+        We could not load this project. Please try again later or contact support.
       </div>
     );
   }
 
   if (!project) {
     return (
-      <div className="text-sm text-muted">Project was not found.</div>
+      <div className="text-sm text-muted">Project not found or you don’t have access.</div>
     );
   }
 
   const parsedSub = searchParams.subprojectId ? Number(searchParams.subprojectId) : NaN;
-  const activeProjectId = Number.isNaN(parsedSub) ? projectId : parsedSub;
+  const baseProjectId = typeof project.id === 'number' ? project.id : Number(project.id);
+  const activeProjectId = Number.isNaN(parsedSub) ? baseProjectId : parsedSub;
 
   const [tasks, usersResp] = await Promise.all([
     fetchWorkspaceTasks(activeProjectId, supabase) as Promise<WorkspaceTask[]>,
@@ -94,7 +89,7 @@ export default async function ProjectBoardPage({
         blocked: project.column_blocked_label ?? 'Blocked',
         done: project.column_done_label ?? 'Done'
       }}
-      projectId={projectId}
+      projectId={baseProjectId}
     />
   );
 }
