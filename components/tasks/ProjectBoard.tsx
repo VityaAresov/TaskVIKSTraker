@@ -14,13 +14,17 @@ export function ProjectBoard({
   role,
   currentUserId,
   users,
-  workspaceId
+  workspaceId,
+  columnLabels,
+  projectId
 }: {
   tasks: WorkspaceTask[];
   role: string;
   currentUserId: string;
   users?: { id: string; full_name: string; role: string; avatar_url?: string | null }[];
   workspaceId: number;
+  columnLabels: { backlog: string; todo: string; in_progress: string; blocked: string; done: string };
+  projectId: number;
 }) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState('all');
@@ -30,10 +34,17 @@ export function ProjectBoard({
   const [error, setError] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [labels, setLabels] = useState(columnLabels);
+  const [editingLabelKey, setEditingLabelKey] = useState<keyof typeof labels | null>(null);
+  const [labelDraft, setLabelDraft] = useState('');
 
   useEffect(() => {
     setItems(tasks);
   }, [tasks]);
+
+  useEffect(() => {
+    setLabels(columnLabels);
+  }, [columnLabels]);
 
   const assigneeOptions = useMemo(() => {
     const uniques = new Map<string, string>();
@@ -82,6 +93,35 @@ export function ProjectBoard({
     }
   };
 
+  const startEditingLabel = (key: keyof typeof labels) => {
+    setEditingLabelKey(key);
+    setLabelDraft(labels[key]);
+  };
+
+  const saveLabel = async () => {
+    if (!editingLabelKey) return;
+    const key = editingLabelKey;
+    const next = labelDraft.trim();
+    if (!next) {
+      setEditingLabelKey(null);
+      return;
+    }
+    setLabels((prev) => ({ ...prev, [key]: next }));
+    setEditingLabelKey(null);
+    const resp = await fetch(`/api/projects/${projectId}/columns`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [key === 'in_progress' ? 'column_in_progress_label' : `column_${key}_label`]: next })
+    });
+    if (!resp.ok) {
+      setLabels(columnLabels);
+      const body = await resp.json().catch(() => ({}));
+      setError(body.error ?? 'Failed to update column name');
+    } else {
+      setError(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -125,6 +165,13 @@ export function ProjectBoard({
         tasks={filtered}
         onStatusChange={handleStatusChange}
         onSelect={(id) => setEditingTaskId(id)}
+        columnLabels={labels}
+        canEditColumns={role !== 'worker'}
+        onEditColumn={(key) => startEditingLabel(key)}
+        editingKey={editingLabelKey ?? undefined}
+        labelDraft={labelDraft}
+        onLabelDraftChange={setLabelDraft}
+        onSaveLabel={saveLabel}
       />
 
       <TaskModal

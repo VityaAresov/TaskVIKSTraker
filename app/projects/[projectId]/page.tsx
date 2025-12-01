@@ -24,7 +24,13 @@ export default async function ProjectBoardPage({
   }
 
   const projectId = Number(params.projectId);
-  const { data: project } = await supabase.from('projects').select('id').eq('id', projectId).single();
+  const { data: project } = await supabase
+    .from('projects')
+    .select(
+      'id, column_backlog_label, column_todo_label, column_in_progress_label, column_blocked_label, column_done_label'
+    )
+    .eq('id', projectId)
+    .single();
   if (!project) return notFound();
 
   const parsedSub = searchParams.subprojectId ? Number(searchParams.subprojectId) : NaN;
@@ -45,6 +51,14 @@ export default async function ProjectBoardPage({
       currentUserId={session.user.id}
       users={users}
       workspaceId={activeProjectId}
+      columnLabels={{
+        backlog: project.column_backlog_label ?? 'Backlog',
+        todo: project.column_todo_label ?? 'To Do',
+        in_progress: project.column_in_progress_label ?? 'In Progress',
+        blocked: project.column_blocked_label ?? 'Blocked',
+        done: project.column_done_label ?? 'Done'
+      }}
+      projectId={projectId}
     />
   );
 }

@@ -125,7 +125,7 @@ export function TaskModal({
         .filter((u) => assigneeIds.includes(u.id))
         .map((u) => ({ id: u.id, name: u.full_name, avatar_url: u.avatar_url }));
       onSaved({
-        id: json.task.id,
+        id: String(json.task.id),
         project_id: workspaceId,
         title,
         description,

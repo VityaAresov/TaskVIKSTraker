@@ -130,3 +130,15 @@ create policy "Managers delete tasks" on tasks for delete using ((select role fr
 create policy "Assignee can view" on task_assignees for select using (auth.uid() = user_id);
 create policy "Comments visible" on task_comments for select using (auth.uid() = author_id or auth.uid() in (select user_id from task_assignees where task_id = task_comments.task_id));
 create policy "Notifications per user" on notifications for select using (auth.uid() = user_id);
+
+-- Column labels for Kanban customization
+ALTER TABLE public.projects
+ADD COLUMN IF NOT EXISTS column_backlog_label text DEFAULT 'Backlog';
+ALTER TABLE public.projects
+ADD COLUMN IF NOT EXISTS column_todo_label text DEFAULT 'To Do';
+ALTER TABLE public.projects
+ADD COLUMN IF NOT EXISTS column_in_progress_label text DEFAULT 'In Progress';
+ALTER TABLE public.projects
+ADD COLUMN IF NOT EXISTS column_blocked_label text DEFAULT 'Blocked';
+ALTER TABLE public.projects
+ADD COLUMN IF NOT EXISTS column_done_label text DEFAULT 'Done';

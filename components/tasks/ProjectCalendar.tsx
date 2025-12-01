@@ -1,21 +1,33 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { format } from 'date-fns';
+import {
+  addDays,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isSameDay,
+  isSameMonth,
+  isWithinInterval,
+  startOfMonth,
+  startOfWeek
+} from 'date-fns';
 import { Card } from '../ui/Card';
 import { Select } from '../ui/Select';
 import { Badge } from '../ui/Badge';
 import { Progress } from '../ui/Progress';
+import { Button } from '../ui/Button';
 import { TaskModal } from './TaskModal';
 import type { WorkspaceTask } from '../../lib/workspaceTypes';
 
-function groupByDueDate(tasks: WorkspaceTask[]) {
-  return tasks.reduce<Record<string, WorkspaceTask[]>>((acc, task) => {
-    const key = task.due_date ? format(new Date(task.due_date), 'yyyy-MM-dd') : 'no-date';
-    acc[key] = acc[key] ? [...acc[key], task] : [task];
-    return acc;
-  }, {});
-}
+const statusTone: Record<WorkspaceTask['status'], string> = {
+  backlog: 'bg-slate-100 text-slate-700',
+  todo: 'bg-sky-100 text-sky-700',
+  in_progress: 'bg-amber-100 text-amber-700',
+  blocked: 'bg-rose-100 text-rose-700',
+  done: 'bg-emerald-100 text-emerald-700'
+};
 
 export function ProjectCalendar({
   tasks,
@@ -34,6 +46,7 @@ export function ProjectCalendar({
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [items, setItems] = useState<WorkspaceTask[]>(tasks);
+  const [monthCursor, setMonthCursor] = useState(startOfMonth(new Date()));
 
   const filtered = useMemo(() => {
     return items.filter((task) => {
@@ -43,12 +56,31 @@ export function ProjectCalendar({
     });
   }, [assigneeFilter, items, statusFilter]);
 
-  const grouped = useMemo(() => groupByDueDate(filtered), [filtered]);
-  const sortedKeys = Object.keys(grouped).sort((a, b) => {
-    if (a === 'no-date') return 1;
-    if (b === 'no-date') return -1;
-    return new Date(a).getTime() - new Date(b).getTime();
-  });
+  const days = useMemo(() => {
+    const start = startOfWeek(startOfMonth(monthCursor), { weekStartsOn: 1 });
+    const end = endOfWeek(endOfMonth(monthCursor), { weekStartsOn: 1 });
+    return eachDayOfInterval({ start, end });
+  }, [monthCursor]);
+
+  const tasksByDay = useMemo(() => {
+    return days.map((day) => {
+      const daily = filtered.filter((task) => {
+        if (!task.due_date && !task.start_date) return false;
+        const start = task.start_date ? new Date(task.start_date) : task.due_date ? new Date(task.due_date) : null;
+        const end = task.due_date ? new Date(task.due_date) : start;
+        if (!start) return false;
+        return end
+          ? isWithinInterval(day, {
+              start,
+              end
+            }) || isSameDay(day, start)
+          : isSameDay(day, start);
+      });
+      return { day, tasks: daily };
+    });
+  }, [days, filtered]);
+
+  const undated = filtered.filter((task) => !task.due_date && !task.start_date);
 
   const handleSaved = (task: WorkspaceTask) => {
     setItems((prev) => {
@@ -59,7 +91,7 @@ export function ProjectCalendar({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-2">
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-40">
             <option value="all">All status</option>
@@ -78,45 +110,92 @@ export function ProjectCalendar({
             ))}
           </Select>
         </div>
-        {role !== 'worker' && (
-          <button
-            type="button"
-            onClick={() => setSelectedTaskId('new')}
-            className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-white shadow-sm"
-          >
-            Create task
-          </button>
-        )}
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={() => setMonthCursor(startOfMonth(new Date()))}>
+            Today
+          </Button>
+          <Button variant="ghost" onClick={() => setMonthCursor((d) => addDays(startOfMonth(d), -1))}>
+            ←
+          </Button>
+          <Button variant="ghost" onClick={() => setMonthCursor((d) => addDays(endOfMonth(d), 1))}>
+            →
+          </Button>
+          {role !== 'worker' && (
+            <Button onClick={() => setSelectedTaskId('new')} className="shadow-sm">
+              Create task
+            </Button>
+          )}
+        </div>
       </div>
 
-      <div className="space-y-3">
-        {sortedKeys.map((day) => (
-          <Card key={day} className="space-y-2">
-            <div className="text-sm font-semibold">
-              {day === 'no-date' ? 'No due date' : format(new Date(day), 'MMM d, yyyy')}
+      <Card className="p-3">
+        <div className="mb-3 flex items-center justify-between text-sm font-semibold">
+          <span>{format(monthCursor, 'MMMM yyyy')}</span>
+        </div>
+        <div className="grid grid-cols-7 gap-2 text-xs font-semibold text-muted">
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+            <div key={d} className="px-2">
+              {d}
             </div>
-            <div className="flex flex-col gap-2">
-              {grouped[day].map((task) => (
-                <div
-                  key={task.id}
-                  className="flex flex-col gap-1 rounded border border-border bg-panel px-3 py-2 cursor-pointer"
-                  onClick={() => setSelectedTaskId(task.id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="font-semibold text-sm">{task.title}</div>
-                    <Badge label={task.status} />
-                  </div>
-                  <div className="text-xs text-muted">{task.assignees?.map((a) => a.name).join(', ') || 'Unassigned'}</div>
-                  <div className="w-full">
+          ))}
+        </div>
+        <div className="mt-2 grid grid-cols-7 gap-2">
+          {tasksByDay.map(({ day, tasks: dayTasks }) => (
+            <div
+              key={day.toISOString()}
+              className={`min-h-[110px] rounded-md border border-border bg-panel p-2 text-xs ${
+                isSameMonth(day, monthCursor) ? '' : 'opacity-60'
+              }`}
+            >
+              <div className="mb-2 flex items-center justify-between text-[11px] font-semibold">
+                <span>{format(day, 'd')}</span>
+                {dayTasks.length > 0 && <Badge label={`${dayTasks.length}`} />}
+              </div>
+              <div className="flex flex-col gap-1">
+                {dayTasks.map((task) => (
+                  <button
+                    key={task.id}
+                    type="button"
+                    className={`flex flex-col rounded border border-border px-2 py-1 text-left ${statusTone[task.status]}`}
+                    onClick={() => setSelectedTaskId(task.id)}
+                  >
+                    <span className="text-[11px] font-semibold line-clamp-1">{task.title}</span>
+                    <div className="text-[10px] text-muted">
+                      {task.assignees?.map((a) => a.name).join(', ') || 'Unassigned'}
+                    </div>
                     <Progress value={(task.progress_current / Math.max(task.progress_target, 1)) * 100} />
-                  </div>
-                </div>
-              ))}
+                  </button>
+                ))}
+              </div>
             </div>
-          </Card>
-        ))}
-        {sortedKeys.length === 0 && <Card className="p-4 text-sm text-muted">No tasks match the current filters.</Card>}
-      </div>
+          ))}
+        </div>
+      </Card>
+
+      {undated.length > 0 && (
+        <Card className="p-3 space-y-2">
+          <div className="text-sm font-semibold">Tasks without dates</div>
+          <div className="flex flex-col gap-2">
+            {undated.map((task) => (
+              <div
+                key={task.id}
+                className="flex items-center justify-between rounded border border-border bg-panel px-3 py-2 text-sm"
+              >
+                <div>
+                  <div className="font-semibold">{task.title}</div>
+                  <div className="text-xs text-muted">{task.assignees?.map((a) => a.name).join(', ') || 'Unassigned'}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge label={task.status} />
+                  <Button size="sm" variant="ghost" onClick={() => setSelectedTaskId(task.id)}>
+                    Set dates
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {selectedTaskId && (
         <TaskModal

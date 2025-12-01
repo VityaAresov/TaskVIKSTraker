@@ -9,26 +9,40 @@ import type { WorkspaceTask } from '../lib/workspaceTypes';
 
 export type Task = WorkspaceTask;
 
-const columns: { key: Task['status']; label: string }[] = [
-  { key: 'backlog', label: 'Backlog' },
-  { key: 'todo', label: 'To Do' },
-  { key: 'in_progress', label: 'In Progress' },
-  { key: 'blocked', label: 'Blocked' },
-  { key: 'done', label: 'Done' }
-];
-
 export function KanbanBoard({
   tasks,
   onStatusChange,
-  onSelect
+  onSelect,
+  columnLabels,
+  canEditColumns,
+  onEditColumn,
+  editingKey,
+  labelDraft,
+  onLabelDraftChange,
+  onSaveLabel
 }: {
   tasks: Task[];
   onStatusChange?: (id: string, status: Task['status']) => void;
   onSelect?: (id: string) => void;
+  columnLabels?: { backlog: string; todo: string; in_progress: string; blocked: string; done: string };
+  canEditColumns?: boolean;
+  onEditColumn?: (key: Task['status']) => void;
+  editingKey?: Task['status'];
+  labelDraft?: string;
+  onLabelDraftChange?: (value: string) => void;
+  onSaveLabel?: () => void;
 }) {
   const [dragging, setDragging] = useState<Task | null>(null);
 
   const byColumn = (status: Task['status']) => tasks.filter((task) => task.status === status);
+
+  const columns: { key: Task['status']; label: string }[] = [
+    { key: 'backlog', label: columnLabels?.backlog ?? 'Backlog' },
+    { key: 'todo', label: columnLabels?.todo ?? 'To Do' },
+    { key: 'in_progress', label: columnLabels?.in_progress ?? 'In Progress' },
+    { key: 'blocked', label: columnLabels?.blocked ?? 'Blocked' },
+    { key: 'done', label: columnLabels?.done ?? 'Done' }
+  ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -46,7 +60,33 @@ export function KanbanBoard({
           }}
         >
           <div className="flex items-center justify-between mb-2">
-            <div className="font-semibold text-sm">{column.label}</div>
+            <div className="flex items-center gap-2 font-semibold text-sm">
+              {editingKey === column.key ? (
+                <input
+                  className="rounded border border-border px-2 py-1 text-xs"
+                  value={labelDraft ?? ''}
+                  onChange={(e) => onLabelDraftChange?.(e.target.value)}
+                  onBlur={onSaveLabel}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') onSaveLabel?.();
+                    if (e.key === 'Escape') onLabelDraftChange?.(column.label);
+                  }}
+                  autoFocus
+                />
+              ) : (
+                <span>{column.label}</span>
+              )}
+              {canEditColumns && !editingKey && (
+                <button
+                  type="button"
+                  className="text-xs text-muted hover:text-foreground"
+                  onClick={() => onEditColumn?.(column.key)}
+                  aria-label={`Rename ${column.label}`}
+                >
+                  ✎
+                </button>
+              )}
+            </div>
             <Badge label={`${byColumn(column.key).length}`} />
           </div>
           <div className="flex flex-col gap-2">
