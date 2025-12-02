@@ -16,89 +16,78 @@ export async function fetchWorkspaceTasks(projectId: number, client?: any): Prom
   const baseSelect =
     'id, project_id, sprint_id, parent_task_id, title, description, status, priority, progress_current, progress_target, visible_to_role, visible_to_user_ids, due_date';
 
-  const enrichedSelect = `${baseSelect}, task_assignees(user_id, users(id, full_name, avatar_url, role)), task_dependencies(depends_on_task_id), task_comments(id)`;
+  const { data, error } = await supabase
+    .from('tasks')
+    .select(baseSelect)
+    .eq('project_id', projectId)
+    .order('id', { ascending: true });
 
-  let baseQuery = supabase.from('tasks').select(enrichedSelect).eq('project_id', projectId);
-
-  const primary = await baseQuery.order('id', { ascending: true });
-
-  let rows = primary.data ?? [];
-
-  if (primary.error) {
-    console.error('[workspace tasks] enriched fetch failed, falling back to base select', { projectId, error: primary.error });
-    const fallbackQuery = supabase.from('tasks').select(baseSelect).eq('project_id', projectId);
-    const fallback = await fallbackQuery.order('id', { ascending: true });
-
-    if (fallback.error) {
-      console.error('[workspace tasks] base fetch failed', { projectId, error: fallback.error });
-      return [];
-    }
-
-    rows = fallback.data ?? [];
+  if (error) {
+    console.error('[workspace tasks] base fetch failed', { projectId, error });
+    return [];
   }
 
-  const childCount = (rows ?? []).reduce((acc: Record<string, number>, task: any) => {
-    if (task.parent_task_id) {
-      acc[task.parent_task_id] = (acc[task.parent_task_id] ?? 0) + 1;
-    }
-    return acc;
-  }, {} as Record<string, number>);
+  const rows = data ?? [];
+  const taskIds = rows.map((t: any) => t.id).filter(Boolean);
 
-  // If the initial query failed to include relationships, try to hydrate lightweight assignees/comments/dependencies.
-  const taskIds = (rows ?? []).map((t: any) => t.id).filter(Boolean);
-  let assigneesData: any[] = [];
-  if (!rows.length || rows.some((r: any) => r.task_assignees === undefined)) {
-    const assigneesResp = await supabase
-      .from('task_assignees')
-      .select('task_id, user_id, users(id, full_name, avatar_url, role)')
-      .in('task_id', taskIds);
-    if (!assigneesResp.error) assigneesData = assigneesResp.data ?? [];
+  const [assigneesResp, depsResp, commentsResp] = await Promise.all([
+    taskIds.length
+      ? supabase
+          .from('task_assignees')
+          .select('task_id, user_id, users(id, full_name, avatar_url, role)')
+          .in('task_id', taskIds)
+      : { data: [], error: null },
+    taskIds.length
+      ? supabase.from('task_dependencies').select('task_id, depends_on_task_id').in('task_id', taskIds)
+      : { data: [], error: null },
+    taskIds.length
+      ? supabase.from('task_comments').select('id, task_id').in('task_id', taskIds)
+      : { data: [], error: null }
+  ]);
+
+  if (assigneesResp.error) {
+    console.error('[workspace tasks] assignees fetch failed', assigneesResp.error);
+  }
+  if (depsResp.error) {
+    console.error('[workspace tasks] dependencies fetch failed', depsResp.error);
+  }
+  if (commentsResp.error) {
+    console.error('[workspace tasks] comments fetch failed', commentsResp.error);
   }
 
-  let dependenciesData: any[] = [];
-  if (!rows.length || rows.some((r: any) => r.task_dependencies === undefined)) {
-    const depsResp = await supabase
-      .from('task_dependencies')
-      .select('task_id, depends_on_task_id')
-      .in('task_id', taskIds);
-    if (!depsResp.error) dependenciesData = depsResp.data ?? [];
-  }
+  const assigneeMap = (assigneesResp.data ?? []).reduce(
+    (acc: Record<string, { id: string; name: string; avatar_url?: string | null; role?: string | null }[]>, row: any) => {
+      const user = row.users;
+      if (!user) return acc;
+      const list = acc[row.task_id] ?? [];
+      list.push({ id: user.id, name: user.full_name, avatar_url: user.avatar_url, role: user.role });
+      acc[row.task_id] = list;
+      return acc;
+    },
+    {} as Record<string, { id: string; name: string; avatar_url?: string | null; role?: string | null }[]>
+  );
 
-  let commentsData: any[] = [];
-  if (!rows.length || rows.some((r: any) => r.task_comments === undefined)) {
-    const commentsResp = await supabase.from('task_comments').select('id, task_id').in('task_id', taskIds);
-    if (!commentsResp.error) commentsData = commentsResp.data ?? [];
-  }
-
-  const assigneeMap = assigneesData.reduce<Record<string, { id: string; name: string; avatar_url?: string | null; role?: string | null }[]>>(function (acc, row: any) {
-    const user = row.users;
-    if (!user) return acc;
-    const list = acc[row.task_id] ?? [];
-    list.push({ id: user.id, name: user.full_name, avatar_url: user.avatar_url, role: user.role });
-    acc[row.task_id] = list;
-    return acc;
-  }, {} as Record<string, { id: string; name: string; avatar_url?: string | null; role?: string | null }[]>);
-
-  const dependenciesMap = dependenciesData.reduce<Record<string, string[]>>((acc, row: any) => {
+  const dependenciesMap = (depsResp.data ?? []).reduce((acc: Record<string, string[]>, row: any) => {
     const list = acc[row.task_id] ?? [];
     if (row.depends_on_task_id) list.push(String(row.depends_on_task_id));
     acc[row.task_id] = list;
     return acc;
   }, {} as Record<string, string[]>);
 
-  const commentsMap = commentsData.reduce<Record<string, number>>((acc, row: any) => {
+  const commentsMap = (commentsResp.data ?? []).reduce((acc: Record<string, number>, row: any) => {
     acc[row.task_id] = (acc[row.task_id] ?? 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  return (rows ?? []).map((task: any) => {
-    const assignees =
-      task.task_assignees?.map((ta: any) => ta.users).filter(Boolean).map((u: any) => ({
-        id: u.id,
-        name: u.full_name,
-        avatar_url: u.avatar_url,
-        role: u.role
-      })) ?? assigneeMap[task.id] ?? [];
+  const childCount = rows.reduce((acc: Record<string, number>, task: any) => {
+    if (task.parent_task_id) {
+      acc[task.parent_task_id] = (acc[task.parent_task_id] ?? 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  return rows.map((task: any) => {
+    const assignees = assigneeMap[task.id] ?? [];
 
     return {
       id: String(task.id),
@@ -116,14 +105,8 @@ export async function fetchWorkspaceTasks(projectId: number, client?: any): Prom
       due_date: task.due_date,
       assignees,
       assigneeIds: assignees.map((a: { id: string }) => a.id),
-      depends_on:
-        task.task_dependencies?.map((d: { depends_on_task_id: string | number }) => String(d.depends_on_task_id)) ??
-        dependenciesMap[task.id] ??
-        [],
-      comments_count:
-        task.task_comments?.length ??
-        commentsMap[task.id] ??
-        0,
+      depends_on: dependenciesMap[task.id] ?? [],
+      comments_count: commentsMap[task.id] ?? 0,
       has_children: Boolean(childCount[task.id])
     } satisfies WorkspaceTask;
   });

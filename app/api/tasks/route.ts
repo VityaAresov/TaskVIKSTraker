@@ -8,17 +8,21 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const supabase = createSupabaseServerClient();
   const { searchParams } = new URL(request.url);
-  const projectIdParam = searchParams.get('project_id');
-  const sprintIdParam = searchParams.get('sprint_id');
-  const projectId = projectIdParam ? Number(projectIdParam) : null;
-  const sprintId = sprintIdParam ? Number(sprintIdParam) : null;
-  const selectColumns =
-    'id, project_id, sprint_id, parent_task_id, title, description, status, due_date, progress_current, progress_target, priority, visible_to_role, visible_to_user_ids, task_assignees(user_id), task_dependencies(depends_on_task_id), task_comments(id)';
+  const projectIdParam = searchParams.get('projectId') ?? searchParams.get('project_id');
+  const projectId = projectIdParam ? Number(projectIdParam) : NaN;
 
-  let query = supabase.from('tasks').select(selectColumns);
-  if (projectId !== null && !Number.isNaN(projectId)) query = query.eq('project_id', projectId);
-  if (sprintId !== null && !Number.isNaN(sprintId)) query = query.eq('sprint_id', sprintId);
-  const { data, error } = await query;
+  if (!Number.isFinite(projectId)) {
+    return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
+  }
+
+  const selectColumns =
+    'id, project_id, sprint_id, parent_task_id, title, description, status, due_date, progress_current, progress_target, priority, visible_to_role, visible_to_user_ids, task_assignees(user_id, users(id, full_name, avatar_url, role)), task_dependencies(depends_on_task_id), task_comments(id)';
+
+  const { data, error } = await supabase
+    .from('tasks')
+    .select(selectColumns)
+    .eq('project_id', projectId)
+    .order('id', { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ tasks: data ?? [] });

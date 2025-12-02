@@ -73,8 +73,6 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
 
   const baseProjectId = typeof project.id === 'number' ? project.id : Number(project.id);
 
-  const columnLabels = await fetchProjectColumnLabels(baseProjectId, supabase, project as any);
-
   const { data: subprojectsData, error: subprojectsError } = await supabase
     .from('projects')
     .select('id, name, parent_project_id')
@@ -86,8 +84,32 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
 
   const subprojects = subprojectsData ?? [];
 
+  const requestedWorkspaceIdRaw =
+    (Array.isArray(searchParams?.subprojectId) ? searchParams?.subprojectId[0] : searchParams?.subprojectId) ??
+    (Array.isArray(searchParams?.subproject_id) ? searchParams?.subproject_id[0] : searchParams?.subproject_id);
+  const requestedWorkspaceId = requestedWorkspaceIdRaw ? Number(requestedWorkspaceIdRaw) : NaN;
+  const isValidSubproject = subprojects.some((sp) => sp.id === requestedWorkspaceId);
+  const activeWorkspaceId = Number.isFinite(requestedWorkspaceId) && isValidSubproject ? requestedWorkspaceId : baseProjectId;
+
+  let activeProjectRow: ProjectRow = project;
+  if (activeWorkspaceId !== baseProjectId) {
+    const { data: subprojectRow, error: subprojectError } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', activeWorkspaceId)
+      .maybeSingle<ProjectRow>();
+    if (subprojectError) {
+      console.error('[project page] failed to load selected subproject', { activeWorkspaceId, subprojectError });
+    }
+    if (subprojectRow) {
+      activeProjectRow = subprojectRow;
+    }
+  }
+
+  const columnLabels = await fetchProjectColumnLabels(activeWorkspaceId, supabase, activeProjectRow as any);
+
   const [tasks, usersResp] = await Promise.all([
-    fetchWorkspaceTasks(baseProjectId, supabase) as Promise<WorkspaceTask[]>,
+    fetchWorkspaceTasks(activeWorkspaceId, supabase) as Promise<WorkspaceTask[]>,
     supabase.from('users').select('id, full_name, role, avatar_url')
   ]);
 
@@ -107,9 +129,9 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
         role={role}
         currentUserId={session.user.id}
         users={users}
-        workspaceId={baseProjectId}
+        workspaceId={activeWorkspaceId}
         columnLabels={columnLabels}
-        projectId={baseProjectId}
+        projectId={activeWorkspaceId}
       />
     </>
   );

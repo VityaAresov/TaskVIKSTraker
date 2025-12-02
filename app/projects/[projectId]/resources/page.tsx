@@ -47,8 +47,25 @@ export default async function ResourcesPage({
     return <div className="text-sm text-muted">Project not found.</div>;
   }
 
+  const subprojectParam =
+    (Array.isArray(searchParams?.subprojectId) ? searchParams?.subprojectId[0] : searchParams?.subprojectId) ??
+    (Array.isArray(searchParams?.subproject_id) ? searchParams?.subproject_id[0] : searchParams?.subproject_id);
+
+  const requestedWorkspaceId = subprojectParam ? Number(subprojectParam) : NaN;
+  let workspaceId = projectId;
+
+  if (Number.isFinite(requestedWorkspaceId)) {
+    const { data: subprojectRow } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('id', requestedWorkspaceId)
+      .eq('parent_project_id', projectId)
+      .maybeSingle();
+    if (subprojectRow) workspaceId = requestedWorkspaceId;
+  }
+
   const [tasks, usersResp] = await Promise.all([
-    fetchWorkspaceTasks(projectId, supabase) as Promise<WorkspaceTask[]>,
+    fetchWorkspaceTasks(workspaceId, supabase) as Promise<WorkspaceTask[]>,
     supabase.from('users').select('id, full_name, role, avatar_url')
   ]);
   const users = usersResp.data ?? [];
@@ -57,7 +74,7 @@ export default async function ResourcesPage({
   return (
     <div className="space-y-4">
       <div className="text-lg font-semibold">Resources for {project.name}</div>
-      <ProjectResources tasks={tasks} users={users} role={role} currentUserId={session.user.id} />
+      <ProjectResources tasks={tasks} users={users} role={role} currentUserId={session.user.id} workspaceId={workspaceId} />
     </div>
   );
 }

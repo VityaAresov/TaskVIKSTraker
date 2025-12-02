@@ -10,12 +10,14 @@ export function ProjectResources({
   tasks,
   users,
   role,
-  currentUserId
+  currentUserId,
+  workspaceId
 }: {
   tasks: WorkspaceTask[];
   users: { id: string; full_name: string; role: string; avatar_url?: string | null }[];
   role: string;
   currentUserId: string;
+  workspaceId?: number;
 }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [sprintFilter, setSprintFilter] = useState('all');
